@@ -1,0 +1,51 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # These NEXT_PUBLIC_* values are INLINED into the client JS bundle at
+        # build time, so if you ever change the public URL you must rebuild.
+        NEXT_PUBLIC_APP_URL: "https://sbryankusno-any6.devcloud.woa.com"
+        NEXT_PUBLIC_SITE_OWNER_NAME: "Bryan"
+        NEXT_PUBLIC_SITE_TAGLINE: "Weekly client progress — read-only public view."
+    image: client-progress-tracker:latest
+    container_name: client-progress-tracker
+    restart: unless-stopped
+
+    # Map host port 80 -> container port 3000.
+    # The AnyDev smart gateway routes the bare hostname
+    # (sbryankusno-any6.devcloud.woa.com) to the CVM's port 80, so exposing
+    # the app here makes the bare domain work directly — no PORT- prefix needed.
+    ports:
+      - "80:3000"
+
+    # Server-side env comes from .env (NextAuth secret, Anthropic key, etc).
+    env_file:
+      - .env
+
+    # Override any values that must differ inside the container.
+    environment:
+      NODE_ENV: "production"
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      # DB lives on the mounted volume so it survives `docker compose up --build`
+      DATABASE_URL: "file:/app/data/app.db"
+
+    volumes:
+      # Persist SQLite DB across rebuilds
+      - app-data:/app/data
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  app-data:

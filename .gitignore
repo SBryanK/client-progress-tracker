@@ -1,0 +1,42 @@
+# Deps
+node_modules
+.next
+.pnp
+.pnp.js
+
+# Env — NEVER commit real secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.production.local
+
+# Prisma local SQLite
+prisma/dev.db
+prisma/dev.db-journal
+**/dev.db
+**/dev.db-journal
+*.db
+*.sqlite
+*.sqlite3
+prisma/migrations/**/migration_lock.toml.bak
+
+# Build
+out/
+dist/
+coverage/
+
+# Vercel
+.vercel
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Imports / user data (don't push the personal Word doc)
+Bryan's+Client+Involvement+Progress+(Intern+Edition).docx

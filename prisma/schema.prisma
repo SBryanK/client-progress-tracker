@@ -1,0 +1,144 @@
+// Prisma schema — Weekly Client Progress Tracker
+// Production (Vercel): Postgres (Neon / Supabase / Vercel Postgres).
+// Local dev: you can still use SQLite by overriding DATABASE_URL and
+//   changing provider to "sqlite" temporarily. For consistency we
+//   recommend running a local Postgres (via Docker) in dev too.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & access control ──────────────────────────────────────────────────
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  role         String   @default("VIEWER") // OWNER | VIEWER
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  clients        Client[]        @relation("OwnedClients")
+  weeklyUpdates  WeeklyUpdate[]  @relation("AuthoredUpdates")
+  clientActivity ClientActivity[] @relation("AuthoredActivities")
+  importBatches  ImportBatch[]
+  shareLinks     ShareLink[]
+}
+
+// ─── A client / project tracked over time ────────────────────────────────────
+model Client {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation("OwnedClients", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name        String   @unique                // e.g. "ExxonMobil", "BNI"
+  slug        String   @unique                // url-safe: "exxonmobil"
+  status      String   @default("ACTIVE")     // ACTIVE | INACTIVE | DEAL | POTENTIAL | PENDING | TERMINATED | FINISHED | ON_HOLD | LEARNING | SHADOWING
+  priority    String   @default("MEDIUM")     // LOW | MEDIUM | HIGH | CRITICAL
+  stage       String?                         // Free-text — e.g. "PoC", "Migration", "Live"
+  tags        String?                         // comma-separated
+  isNewLead   Boolean  @default(false)
+
+  bdOwner     String?                         // Business-development contact
+  region      String?                         // e.g. "ID", "SG", "MY"
+  industry    String?
+  accountValue String?                        // free-form: "~$350/month", "~3 PB/year"
+
+  summary     String?                         // one-line description shown on cards
+  notes       String?                         // long-form markdown notes (rich content)
+
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  weeklyUpdates WeeklyUpdate[]
+  activities    ClientActivity[]
+
+  @@index([ownerId, status])
+  @@index([status])
+  @@index([archived])
+}
+
+// ─── Weekly report entry — one row per (client, week) ────────────────────────
+model WeeklyUpdate {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation("AuthoredUpdates", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // ISO week — we store the Monday (UTC) as the canonical week-start so
+  // "2025-W15" = weekStart 2025-04-07.
+  weekStart  DateTime
+  weekLabel  String   // free-form label like "April 6 – April 10"
+
+  // Bullet-style content mirroring the Word template
+  bullets    String   // newline-separated bullet items (each line = one bullet)
+  highlights String?  // optional manager-friendly summary
+  blockers   String?
+  nextAction String?
+  status     String?  // snapshot of client status when the update was written
+
+  sourceDoc  String?  // filename if imported from Word
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([clientId, weekStart])
+  @@index([weekStart])
+  @@index([clientId])
+}
+
+// ─── Historical activity log ("List of Works" section of the Word doc) ───────
+// Each client has many activities classified as ACTIVITY / ISSUE / PROGRESS.
+model ClientActivity {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation("AuthoredActivities", fields: [authorId], references: [id], onDelete: Cascade)
+
+  kind      String   // ACTIVITY | ISSUE_SUPPORT | PROGRESS
+  occurredOn DateTime?
+  body      String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId, kind])
+}
+
+// ─── Import audit trail ──────────────────────────────────────────────────────
+model ImportBatch {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename     String
+  format       String   // "docx" | "xlsx"
+  totalItems   Int
+  importedClients Int
+  importedUpdates Int
+  importedActivities Int
+  notes        String?
+  createdAt    DateTime @default(now())
+}
+
+// ─── Read-only share links ───────────────────────────────────────────────────
+model ShareLink {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  label        String
+  fromDate     DateTime?
+  toDate       DateTime?
+  clientId     String?
+  statusFilter String?
+  revoked      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime?
+}

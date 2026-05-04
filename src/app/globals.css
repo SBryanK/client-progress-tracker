@@ -1,0 +1,284 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design tokens ──────────────────────────────────────────────────── */
+:root {
+  /* Surfaces — soft off-white with a hint of warmth; avoids the flat,
+     clinical "pure white" look while staying printable. */
+  --bg: #fdfdfc;
+  --bg-subtle: #f5f4f1;
+  --bg-muted: #eceae5;
+  --border: #e0ddd6;
+  --border-strong: #c9c5bc;
+
+  /* Text — near-black with a hint of ink, not pure #000. */
+  --fg: #14151a;
+  --fg-muted: #55606e;
+  --fg-subtle: #8a8f99;
+
+  /* Brand / Accent — deep indigo.  Pairs well with the warm neutrals. */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-soft: rgba(79, 70, 229, 0.08);
+  --accent-fg: #ffffff;
+
+  /* Semantic */
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --info: #0369a1;
+
+  /* Elevation — subtle, layered shadows. */
+  --shadow-sm: 0 1px 2px 0 rgb(20 21 26 / 0.04);
+  --shadow-md: 0 4px 14px -2px rgb(20 21 26 / 0.08), 0 2px 6px -2px rgb(20 21 26 / 0.04);
+  --shadow-lg: 0 20px 40px -16px rgb(20 21 26 / 0.14), 0 8px 20px -8px rgb(20 21 26 / 0.08);
+}
+
+.dark {
+  --bg: #0b0d12;
+  --bg-subtle: #12141b;
+  --bg-muted: #1b1e27;
+  --border: #262a36;
+  --border-strong: #3a3f4d;
+  --fg: #f2f3f5;
+  --fg-muted: #a5acb9;
+  --fg-subtle: #6b7280;
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-soft: rgba(129, 140, 248, 0.12);
+  --accent-fg: #0b0d12;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #38bdf8;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 14px -2px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 20px 40px -16px rgb(0 0 0 / 0.6), 0 8px 20px -8px rgb(0 0 0 / 0.4);
+}
+
+html {
+  color-scheme: light dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", "Segoe UI", Roboto, Inter, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01", "ss03";
+}
+
+/* Display face — unified under San Francisco. `.font-display` is kept as
+   an alias so legacy call-sites still work, but it inherits the SF stack. */
+.font-display {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "SF Pro Text", "Helvetica Neue", Inter, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Global focus-visible ring */
+:where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ─── Motion primitives ──────────────────────────────────────────────── */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 10px color-mix(in oklab, var(--accent) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 0%, transparent);
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+.animate-rise-in {
+  animation: rise-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.animate-pulse-ring {
+  animation: pulse-ring 2.2s cubic-bezier(0.66, 0, 0.33, 1) infinite;
+}
+
+/* Stagger helper — applied on parent, hits children 1..6. */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Utility polish ─────────────────────────────────────────────────── */
+/* Press micro-interaction on anything with .press */
+.press {
+  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.press:active {
+  transform: scale(0.98);
+}
+
+/* Raised cards that lift on hover */
+.card-hover {
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              border-color 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+/* Hero radial gradient wash — deeper, multi-stop, with a faint noise grain
+   via a tiny inline SVG. Gives the hero surface presence without calling
+   attention to itself. */
+.hero-wash {
+  position: relative;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, var(--accent-soft), transparent 60%),
+    radial-gradient(900px 400px at 5% 20%, rgb(184 134 11 / 0.07), transparent 60%),
+    radial-gradient(600px 300px at 50% 100%, color-mix(in oklab, var(--accent) 5%, transparent), transparent 70%);
+}
+.hero-wash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.035 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: overlay;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Hairline — 1px separator that blends at the edges. */
+.hairline {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+}
+
+/* Tiny shadow token for badges & count pills. */
+.shadow-xs {
+  box-shadow: 0 1px 1px 0 rgb(20 21 26 / 0.04);
+}
+.dark .shadow-xs {
+  box-shadow: 0 1px 1px 0 rgb(0 0 0 / 0.3);
+}
+
+/* Shimmering gradient text for the display title accent */
+.text-gradient {
+  background: linear-gradient(
+    100deg,
+    var(--accent) 0%,
+    color-mix(in oklab, var(--accent) 60%, #9333ea) 50%,
+    var(--accent) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: shimmer 6s linear infinite;
+}
+
+/* Long-form fields preserve line-breaks */
+.prose-entry {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.65;
+}
+
+/* Soft divider */
+.divider-soft {
+  background: linear-gradient(to right, transparent, var(--border) 20%, var(--border) 80%, transparent);
+}
+
+/* Inset shadow used by segmented-control style containers. Soft enough to
+   feel like a subtle frame, strong enough to distinguish from the page. */
+.shadow-inner-soft {
+  box-shadow: inset 0 1px 2px 0 rgb(20 21 26 / 0.04);
+}
+.dark .shadow-inner-soft {
+  box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
+}
+
+/* Hides the scrollbar but keeps the scroll behaviour — used by horizontal
+   scrollers (e.g. the filter bar on narrow viewports). */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Scroll-contained boxes — the cursor scrolls inside them independently,
+   and wheel events stop at the top/bottom instead of leaking to the page. */
+.scroll-contain {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.scroll-contain::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-contain::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+}
+.scroll-contain::-webkit-scrollbar-track {
+  background: transparent;
+}
