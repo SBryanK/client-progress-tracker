@@ -1,16 +1,22 @@
 // Prisma schema — Weekly Client Progress Tracker
-// Production (Vercel): Postgres (Neon / Supabase / Vercel Postgres).
-// Local dev: you can still use SQLite by overriding DATABASE_URL and
-//   changing provider to "sqlite" temporarily. For consistency we
-//   recommend running a local Postgres (via Docker) in dev too.
+// Production (Vercel): Vercel Postgres (Neon under the hood).
+//   When you add a Vercel Postgres store to the project, Vercel auto-injects
+//   POSTGRES_PRISMA_URL (pooled, runtime) and POSTGRES_URL_NON_POOLING
+//   (direct, for migrations) into every environment.
+// Local dev: override with a local DATABASE_URL (see .env.example). The
+//   schema always reads POSTGRES_PRISMA_URL first, falling back to
+//   DATABASE_URL for local work.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection used at runtime (PgBouncer) — required for serverless.
+  url       = env("POSTGRES_PRISMA_URL")
+  // Direct connection used by `prisma migrate` / `prisma db push`.
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 // ─── Users & access control ──────────────────────────────────────────────────

@@ -1,201 +1,222 @@
-# Deploy to Vercel + EdgeOne CDN (production runbook)
+# Deploy to Vercel + Vercel Postgres + EdgeOne CDN (production runbook)
 
 Target architecture:
 
 ```
-User → client-tracker.sbryank.com  (Hostinger DNS)
-         │ CNAME
-         ▼
-      EdgeOne (CDN + WAF)
-         │ origin pull
-         ▼
-      <project>.vercel.app  (Next.js on Vercel, region: sin1)
+User → client-tracker.sbryank.com  (Hostinger DNS: CNAME)
          │
          ▼
-      Postgres (Neon / Supabase / Vercel Postgres)
+      EdgeOne (CDN + WAF)
+         │ origin pull (HTTPS, Host=client-tracker.sbryank.com)
+         ▼
+      <project>.vercel.app  (Next.js 15 on Vercel, region: sin1)
+         │  Prisma Client
+         ▼
+      Vercel Postgres  (persistent, Neon-backed, auto-provisioned)
 ```
+
+Why Vercel Postgres?
+
+- **1-click** from the Vercel dashboard — no separate account.
+- **Auto-injects** `POSTGRES_PRISMA_URL` (pooled) and `POSTGRES_URL_NON_POOLING`
+  (direct) into every deployment environment. Our `prisma/schema.prisma`
+  already reads both.
+- **Persistent** — survives redeploys, preview branches, rollbacks.
+- Free hobby tier is enough for this workload.
 
 ---
 
 ## 0. Prerequisites
 
-- GitHub account: `github.com/SBryanK`
-- Vercel account (sign up with GitHub for 1-click import)
-- Postgres database (pick one):
-  - **Neon** (recommended, free tier is generous): https://neon.tech
-  - **Supabase**: https://supabase.com
-  - **Vercel Postgres** (one-click from Vercel dashboard)
-- Hostinger account for DNS of `sbryank.com`
-- Tencent Cloud EdgeOne Enterprise plan (already have)
+- GitHub account: `github.com/SBryanK` ✅
+- Vercel account (sign up with GitHub — 30 s)
+- Hostinger account for DNS of `sbryank.com` ✅
+- Tencent Cloud EdgeOne Enterprise plan ✅
 
 ---
 
 ## 1. Rotate leaked secrets (DO THIS FIRST)
 
-Your local `.env` contains real secrets. Even though `.gitignore` excludes it,
-the ANTHROPIC key has been pasted in chat. **Rotate it now** at
-https://console.anthropic.com/settings/keys — disable the old key, issue a new
-one. You'll paste the new key into Vercel env vars in step 5.
+The Anthropic key that was pasted in earlier chat messages must be treated as
+compromised. Rotate it now at https://console.anthropic.com/settings/keys →
+disable the old key, issue a new one.
 
-Also generate a fresh `AUTH_SECRET`:
+Generate a fresh `AUTH_SECRET`:
 
 ```bash
 openssl rand -base64 32
 ```
 
-Keep this value — you'll paste it into Vercel.
+Keep both values handy — you'll paste them into Vercel in step 4.
 
 ---
 
 ## 2. Push code to GitHub
 
+The remote is already wired to `https://github.com/SBryanK/client-progress-tracker.git`.
 From the project directory:
 
 ```bash
 cd /data/workspace/client-progress-tracker
 
-# One-time git identity (replace with your info)
-git config --global user.name  "Bryan Santasila"
-git config --global user.email "santasila.bryan@gmail.com"
+# Sanity-check that .env is ignored
+git status --short | grep -E "^\\?\\? .env$" && echo "STOP: .env is tracked" || echo "OK: .env is ignored"
 
-# Init + initial commit
-git init -b main
-git add .
-git status                        # ← verify .env is NOT in the list
-git commit -m "chore: initial commit — Weekly Client Progress Tracker"
-
-# Create repo on github.com/SBryanK first (UI or `gh` CLI), then:
-git remote add origin git@github.com:SBryanK/client-progress-tracker.git
-# or HTTPS:
-# git remote add origin https://github.com/SBryanK/client-progress-tracker.git
-
+# First push (you'll be prompted for a GitHub Personal Access Token)
 git push -u origin main
 ```
 
-If using HTTPS auth, GitHub will prompt for a **Personal Access Token** (not
-password). Create one at https://github.com/settings/tokens with `repo` scope.
+Create the PAT at https://github.com/settings/tokens (scope: `repo`). If the
+repo doesn't exist yet, create it at https://github.com/new with name
+`client-progress-tracker`, **Private** or **Public** (your call), do NOT
+initialize with README/license/.gitignore — we already have them.
 
 ---
 
-## 3. Provision Postgres (Neon example, 3 minutes)
-
-1. Sign in to https://console.neon.tech with GitHub.
-2. **Create project** → name: `client-progress-tracker`, region: `ap-southeast-1 (Singapore)`.
-3. After creation, go to **Connection Details** → copy two URLs:
-   - **Pooled** connection → this is your `DATABASE_URL`
-   - **Direct** connection → this is your `DIRECT_URL` (optional but recommended)
-
-They look like:
-```
-postgresql://user:pwd@ep-xxx-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-postgresql://user:pwd@ep-xxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-```
-
----
-
-## 4. Import to Vercel
+## 3. Import to Vercel
 
 1. Go to https://vercel.com/new
 2. **Import Git Repository** → pick `SBryanK/client-progress-tracker`
-3. Framework: **Next.js** (auto-detected)
+3. Framework preset: **Next.js** (auto-detected)
 4. Root directory: `./`
-5. **DO NOT click Deploy yet** — first add env vars (next step).
+5. **DO NOT click Deploy yet** — first we provision the database (step 4).
+6. If Vercel forces a first build without DB, cancel it — we'll redeploy after
+   wiring the DB.
 
 ---
 
-## 5. Environment variables on Vercel
+## 4. Provision Vercel Postgres (1-click, 60 seconds)
 
-In the Vercel import screen, under **Environment Variables**, add:
+1. After the project is imported, open it in the Vercel dashboard.
+2. Top nav → **Storage** → **Create Database** → **Postgres** → **Continue**.
+3. Name: `client-progress-tracker-db`. Region: **Singapore (sin1)** (closest
+   to your users and to the Next.js runtime region).
+4. Click **Create & Continue** → **Connect Project** → select
+   `client-progress-tracker` → tick **Production**, **Preview**, **Development**
+   → **Connect**.
 
-| Key                           | Value                                                           |
-|-------------------------------|-----------------------------------------------------------------|
-| `DATABASE_URL`                | Neon pooled URL from step 3                                      |
-| `DIRECT_URL`                  | Neon direct URL (optional)                                       |
-| `AUTH_SECRET`                 | output of `openssl rand -base64 32`                              |
-| `AUTH_TRUST_HOST`             | `true`                                                           |
-| `AUTH_URL`                    | `https://client-tracker.sbryank.com`                             |
-| `NEXT_PUBLIC_APP_URL`         | `https://client-tracker.sbryank.com`                             |
-| `OWNER_EMAILS`                | `santasila.bryan@gmail.com,9santasilabryan9@gmail.com`           |
-| `OWNER_PASSWORD`              | strong password (change from the dev one)                        |
-| `OWNER_NAME`                  | `Bryan`                                                          |
-| `NEXT_PUBLIC_SITE_OWNER_NAME` | `Bryan`                                                          |
-| `NEXT_PUBLIC_SITE_TAGLINE`    | `Weekly client progress — read-only public view.`                |
-| `ANTHROPIC_API_KEY`           | your **new** Anthropic key (the old one was leaked in chat)      |
+Vercel now auto-injects into the project (visible under
+**Settings → Environment Variables**):
 
-Scope: apply to **Production**, **Preview**, **Development** (all checked).
+- `POSTGRES_URL`
+- `POSTGRES_PRISMA_URL`               ← Prisma Client reads this at runtime
+- `POSTGRES_URL_NON_POOLING`          ← `prisma db push` reads this at build
+- `POSTGRES_USER`, `POSTGRES_HOST`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE`
 
-Click **Deploy**. First build takes ~2-3 min. It runs:
-```
-prisma generate && prisma db push --accept-data-loss --skip-generate && next build
-```
-which also creates the tables in Neon.
-
-When done you get a URL like `https://client-progress-tracker-xxx.vercel.app`.
-Open it, confirm the landing page loads and login works.
+You don't need to touch any of these.
 
 ---
 
-## 6. Seed the database (first run)
+## 5. Add the rest of the environment variables
 
-After first deploy, your DB is empty. Run seed remotely:
+Project → **Settings** → **Environment Variables** → add:
 
-Option A — from your local machine, pointing to Neon:
+| Key                           | Value                                                           | Environments          |
+|-------------------------------|-----------------------------------------------------------------|-----------------------|
+| `AUTH_SECRET`                 | output of `openssl rand -base64 32`                              | Prod + Preview + Dev  |
+| `AUTH_TRUST_HOST`             | `true`                                                           | Prod + Preview + Dev  |
+| `AUTH_URL`                    | `https://client-tracker.sbryank.com`                             | Production            |
+| `AUTH_URL`                    | leave blank or set to the preview URL                            | Preview (optional)    |
+| `NEXT_PUBLIC_APP_URL`         | `https://client-tracker.sbryank.com`                             | Prod + Preview + Dev  |
+| `OWNER_EMAILS`                | `santasila.bryan@gmail.com,9santasilabryan9@gmail.com`           | Prod + Preview + Dev  |
+| `OWNER_PASSWORD`              | strong password (change from the local dev one)                  | Prod + Preview + Dev  |
+| `OWNER_NAME`                  | `Bryan`                                                          | Prod + Preview + Dev  |
+| `NEXT_PUBLIC_SITE_OWNER_NAME` | `Bryan`                                                          | Prod + Preview + Dev  |
+| `NEXT_PUBLIC_SITE_TAGLINE`    | `Weekly client progress — read-only public view.`                | Prod + Preview + Dev  |
+| `ANTHROPIC_API_KEY`           | your **new** Anthropic key (the old one was leaked)              | Prod + Preview + Dev  |
+
+Do NOT add `DATABASE_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`
+manually — those are owned by the Vercel Postgres integration.
+
+---
+
+## 6. Deploy
+
+Project → **Deployments** → **Redeploy** the latest commit (or push a dummy
+commit). The build runs:
+
+```
+npm install
+prisma generate                    ← via "postinstall"
+prisma db push --accept-data-loss  ← creates tables in Vercel Postgres
+next build
+```
+
+Build takes ~2-3 min. When done, open
+`https://client-progress-tracker-<hash>.vercel.app` and confirm the landing
+page loads.
+
+---
+
+## 7. Seed the owner account (first run)
+
+Pull the production env down and run the seed once:
+
 ```bash
 cd /data/workspace/client-progress-tracker
-# Temporarily put the Neon DATABASE_URL + OWNER_* vars in a local .env.seed
-DATABASE_URL="<neon pooled url>" \
-OWNER_EMAILS="santasila.bryan@gmail.com" \
-OWNER_PASSWORD="<same as Vercel>" \
-OWNER_NAME="Bryan" \
+
+# One-time: install Vercel CLI and login
+npm i -g vercel
+vercel login
+vercel link                         # pick SBryanK/client-progress-tracker
+
+# Pull production env (creates .env.production.local — git-ignored)
+vercel env pull .env.production.local --environment=production
+
+# Seed using those real creds
+set -a; source .env.production.local; set +a
 npx tsx prisma/seed.ts
+
+# Clean up
+rm .env.production.local
 ```
 
-Option B — from Vercel dashboard, add a one-off cron/deploy hook that runs
-`npm run db:seed` (not covered here — Option A is simpler).
+This creates the owner user(s) listed in `OWNER_EMAILS` with
+`OWNER_PASSWORD` hashed.
 
 ---
 
-## 7. DNS + custom domain
+## 8. Custom domain + EdgeOne CDN
 
-### 7a. On Vercel
+### 8a. Add the domain in Vercel
+
 1. Project → **Settings** → **Domains** → add `client-tracker.sbryank.com`.
-2. Vercel gives you DNS instructions. You have two routing options:
+2. Vercel will suggest DNS records. You have two routing options:
    - **Direct (no EdgeOne)**: CNAME `client-tracker` → `cname.vercel-dns.com`.
-   - **Through EdgeOne (what you want)**: don't point DNS at Vercel directly;
-     we'll use EdgeOne as the middleman.
+   - **Through EdgeOne (what you want)**: keep DNS at Hostinger pointing at
+     EdgeOne; EdgeOne pulls from Vercel.
+3. For the EdgeOne path, still add the domain in Vercel so it issues a TLS
+   cert and accepts traffic for that Host header. Vercel may show
+   "Invalid Configuration" until traffic actually flows — that's OK; it
+   validates automatically on the first real request.
 
-For the EdgeOne path, still add the domain in Vercel so Vercel issues a TLS
-cert and accepts requests for that Host header. Vercel might complain about
-DNS mismatch — that's OK, it will validate once traffic actually flows from
-EdgeOne with the correct Host header.
+### 8b. EdgeOne configuration
 
-### 7b. On EdgeOne
-1. Console → EdgeOne → **Add Site** → `sbryank.com` (NS mode) or
-   **CNAME access** mode if you want to keep DNS at Hostinger.
-2. **Domain service** → **Add domain** → `client-tracker.sbryank.com`.
+1. Console → EdgeOne → **Add Site** (CNAME access mode if keeping DNS at
+   Hostinger): `sbryank.com`.
+2. **Domain services** → **Add domain** → `client-tracker.sbryank.com`.
 3. **Origin configuration**:
    - Origin type: **Origin domain**
    - Origin address: `<your-vercel-subdomain>.vercel.app`
-   - Origin protocol: **HTTPS** (port 443)
-   - **Host header**: `client-tracker.sbryank.com`
-     (CRITICAL — Vercel routes by Host header; must match the custom domain
-      you added in Vercel)
-   - Follow 301/302: on
-4. **HTTPS**: let EdgeOne issue a free cert for `client-tracker.sbryank.com`,
-   or upload your own. Force HTTPS redirect: on. HTTP/2 + HTTP/3: on.
-5. **Caching rules**:
-   - `/_next/static/*` → cache 1 year
+   - Origin protocol: **HTTPS** (443)
+   - **Host header**: `client-tracker.sbryank.com` (CRITICAL — Vercel routes
+     by Host header; must match the domain you added in Vercel)
+   - Follow 3xx: on
+4. **HTTPS**: enable EdgeOne-issued free cert for `client-tracker.sbryank.com`;
+   force HTTPS redirect on; HTTP/2 + HTTP/3 on.
+5. **Caching rules** (this app is mostly dynamic — be conservative):
+   - `/_next/static/*` → cache 1 year (immutable, content-hashed)
    - `/images/*`, `/favicon.ico`, `/icon.svg` → cache 7 days
-   - Everything else (default) → **no-cache** or very short TTL
-     (because this app is dynamic — weekly updates, auth, share links).
-   - Bypass cache when cookies `authjs.session-token` or `next-auth.session-token`
-     are present.
+   - Default → **no-cache** (weekly updates, auth, share links must be fresh)
+   - Bypass cache when cookies `authjs.session-token` or
+     `next-auth.session-token` are present
 6. **Compression**: Brotli + Gzip on.
-7. **WAF**: enable Basic protection ruleset.
-8. EdgeOne shows a **CNAME target** like
-   `client-tracker.sbryank.com.cdn.dnsv1.com`. Copy it.
+7. **WAF**: enable the Basic protection ruleset.
+8. Copy the CNAME target EdgeOne shows, e.g.
+   `client-tracker.sbryank.com.cdn.dnsv1.com`.
 
-### 7c. On Hostinger
+### 8c. Hostinger DNS
+
 DNS zone for `sbryank.com`:
 
 | Type  | Name             | Value                                         | TTL  |
@@ -206,43 +227,48 @@ Wait 5-30 min for propagation.
 
 ---
 
-## 8. Smoke test
+## 9. Smoke test
 
 ```bash
-# Should return HTTP/2 200 with Server: TencentEdgeOne-ish header
+# Should return HTTP/2 200 with TencentEdgeOne server header
 curl -I https://client-tracker.sbryank.com
 
-# Hit origin directly — also should be 200
+# Hit origin directly — also 200
 curl -I https://<your-project>.vercel.app
 
-# DNS resolution check
+# DNS check
 dig +short client-tracker.sbryank.com
 ```
 
-Browser: open https://client-tracker.sbryank.com — should see the public
-landing page. Click **Sign in**, use an `OWNER_EMAILS` address + the
-`OWNER_PASSWORD` you set.
+Browser: open https://client-tracker.sbryank.com → landing page loads, then
+sign in with an `OWNER_EMAILS` address + `OWNER_PASSWORD`.
 
 ---
 
-## 9. Ongoing workflow
+## 10. Ongoing workflow
 
-Any push to `main` → Vercel auto-deploys. Preview deploys happen for branches
-and PRs. EdgeOne keeps pointing at the stable production domain, so no cache
-purge is needed for code pushes (only for static asset hash changes, which
-Next.js handles with content-hashed filenames automatically).
-
-If you change env vars in Vercel, click **Redeploy** to pick them up.
+- **Any push to `main`** → Vercel auto-builds & deploys. `prisma db push` runs
+  against Vercel Postgres, so schema changes are applied automatically.
+- **Preview branches** get their own URL + the same Postgres DB (be careful:
+  previews write to production data). For isolated previews, create a second
+  Vercel Postgres store and scope it to Preview only.
+- **Env var changes** → Vercel → Redeploy (they're only read at build/runtime
+  start).
+- **Rollback** → Vercel → Deployments → select a previous one → Promote.
+- **EdgeOne cache purge** is only needed for hard static changes; Next.js
+  content-hashes all `/_next/static/*` so code pushes don't require a purge.
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
-| Symptom                                    | Likely cause / fix                                                                                    |
-|--------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| Vercel build fails on `prisma db push`     | `DATABASE_URL` wrong/unreachable. Check Neon dashboard, ensure `?sslmode=require` is present.         |
-| 500 on `/api/auth/*`                       | `AUTH_SECRET` missing or `AUTH_URL` doesn't match the host. Set `AUTH_TRUST_HOST=true`.               |
-| EdgeOne returns 404 / Vercel 404           | Origin Host header not set to the custom domain. Fix in EdgeOne origin config.                        |
-| Auth redirects to vercel.app instead of custom domain | `AUTH_URL` should be the public domain (`https://client-tracker.sbryank.com`), not the vercel one. |
-| "Too many connections" on Postgres         | Use the **pooled** Neon URL for `DATABASE_URL`, not the direct one.                                   |
-| Static assets stale                        | EdgeOne → Cache → purge by prefix `/_next/static/` after a deploy if you see old hashes.              |
+| Symptom                                                  | Likely cause / fix                                                                                                |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| Vercel build fails on `prisma db push`                   | Vercel Postgres not connected to the project. Re-check Storage → Project link. Confirm `POSTGRES_URL_NON_POOLING` env var is present. |
+| 500 on `/api/auth/*`                                     | `AUTH_SECRET` missing or `AUTH_URL` ≠ the host the browser is using. Set `AUTH_TRUST_HOST=true`.                  |
+| Auth redirects to `*.vercel.app` instead of custom domain| `AUTH_URL` must be `https://client-tracker.sbryank.com` for Production.                                            |
+| EdgeOne returns 404 / Vercel 404 page                    | Origin Host header not set to the custom domain. Fix in EdgeOne origin config.                                     |
+| "prepared statement already exists" on Postgres          | Something is using the non-pooling URL at runtime. Confirm `schema.prisma` has `url = env("POSTGRES_PRISMA_URL")`. |
+| "Too many connections"                                   | Same — make sure runtime uses the pooled URL (`POSTGRES_PRISMA_URL`).                                              |
+| Static assets stale in the browser                       | EdgeOne → Caching → Purge by prefix `/_next/static/` after a deploy if old hashes appear.                          |
+| Preview deploys mutate production data                   | Create a second Vercel Postgres store, connect only to Preview/Development, leave the first one only on Production. |
