@@ -80,7 +80,7 @@ export function PublicHeader({
           : "border-transparent bg-bg/70 backdrop-blur-md",
       )}
     >
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10 xl:px-14 h-16 flex items-center gap-4">
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-20 h-16 flex items-center gap-4">
         {/* Brand mark — T glyph (Tencent blue) as the sole wordmark */}
         <Link
           href="/"

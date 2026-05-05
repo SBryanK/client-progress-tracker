@@ -48,9 +48,9 @@ export default async function LandingPage() {
       {/* ═══ Hero ═══════════════════════════════════════════════════════ */}
       <section
         aria-labelledby="hero-title"
-        className="hero-wash relative -mx-4 sm:-mx-6 lg:-mx-10 px-4 sm:px-6 lg:px-10 pt-10 pb-10 rounded-3xl"
+        className="hero-wash relative -mx-4 sm:-mx-6 lg:-mx-10 xl:-mx-14 2xl:-mx-20 px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-20 pt-10 pb-10 rounded-3xl"
       >
-        <div className="relative max-w-4xl animate-rise-in">
+        <div className="relative max-w-5xl animate-rise-in">
           <p className="inline-flex items-center gap-2 rounded-full border border-border bg-bg/70 backdrop-blur px-3 py-1 text-[11px] font-medium text-fg-muted uppercase tracking-[0.12em] shadow-xs">
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse-ring" />
             <T id="hero.eyebrow" fallback="Client Progress Tracker" />
@@ -104,7 +104,7 @@ export default async function LandingPage() {
       {/* ═══ Stats row ══════════════════════════════════════════════════ */}
       <section
         aria-label="Pipeline snapshot"
-        className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 stagger animate-fade-up"
+        className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 stagger animate-fade-up"
       >
         <StatCard
           labelKey="stat.total"
@@ -139,18 +139,11 @@ export default async function LandingPage() {
         />
       </section>
 
-      {/* ═══ Recent updates ═══════════════════════════════════════════ */}
+      {/* ═══ Recent updates ═════════════════════════════ */}
       <section aria-label="Recent updates" className="animate-fade-up">
         <div className="flex items-end justify-between gap-4 mb-5 flex-wrap">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span aria-hidden className="h-px w-8 bg-accent" />
-              <span className="text-[11px] uppercase tracking-[0.12em] text-accent font-semibold">
-                <T id="recent.eyebrow" fallback="Timeline" />
-              </span>
-            </div>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight font-display">
-              <T id="recent.title" fallback="Recent updates" />
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight font-display">              <T id="recent.title" fallback="Recent updates" />
             </h2>
             <p className="mt-1 text-sm text-fg-muted font-description">
               <T
@@ -224,36 +217,51 @@ function StatCard({
   sublabel?: string;
   sublabelKey?: string;
 }) {
-  const accentBar = {
-    neutral: "bg-fg-subtle/30",
-    info: "bg-info",
-    success: "bg-success",
-    warning: "bg-warning",
+  // Entire card tinted (soft), not just the top bar.
+  const toneCard = {
+    neutral:
+      "border-border/50 bg-gradient-to-br from-bg to-bg-subtle",
+    info:
+      "border-info/25 bg-gradient-to-br from-sky-50 to-sky-100/60 dark:from-sky-500/10 dark:to-sky-500/5",
+    success:
+      "border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-emerald-100/60 dark:from-emerald-500/10 dark:to-emerald-500/5",
+    warning:
+      "border-amber-200/60 bg-gradient-to-br from-amber-50 to-amber-100/60 dark:from-amber-500/10 dark:to-amber-500/5",
   }[tone];
-  const glowBg = {
-    neutral: "",
-    info: "bg-info/5",
-    success: "bg-success/5",
-    warning: "bg-warning/5",
+  const toneLabel = {
+    neutral: "text-fg-subtle",
+    info: "text-sky-700 dark:text-sky-300",
+    success: "text-emerald-700 dark:text-emerald-300",
+    warning: "text-amber-700 dark:text-amber-300",
+  }[tone];
+  const toneValue = {
+    neutral: "text-fg",
+    info: "text-sky-900 dark:text-sky-100",
+    success: "text-emerald-900 dark:text-emerald-100",
+    warning: "text-amber-900 dark:text-amber-100",
+  }[tone];
+  const toneSub = {
+    neutral: "text-fg-subtle",
+    info: "text-sky-700/80 dark:text-sky-300/80",
+    success: "text-emerald-700/80 dark:text-emerald-300/80",
+    warning: "text-amber-700/80 dark:text-amber-300/80",
   }[tone];
   return (
-    <div className="card-hover group relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-bg to-bg-subtle p-5 shadow-sm">
-      <span
-        aria-hidden
-        className={`absolute inset-x-0 top-0 h-0.5 ${accentBar}`}
-      />
-      <span
-        aria-hidden
-        className={`absolute -top-10 -right-10 h-32 w-32 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity ${glowBg}`}
-      />
-      <p className="relative text-[11px] uppercase tracking-[0.08em] text-fg-subtle font-semibold font-description">
+    <div
+      className={`card-hover group relative overflow-hidden rounded-2xl border p-5 shadow-sm ${toneCard}`}
+    >
+      <p
+        className={`relative text-[11px] uppercase tracking-[0.08em] font-semibold font-description ${toneLabel}`}
+      >
         {labelKey ? <T id={labelKey} fallback={label} /> : label}
       </p>
-      <p className="relative mt-3 text-4xl font-semibold tabular-nums tracking-tight font-display">
+      <p
+        className={`relative mt-3 text-4xl font-semibold tabular-nums tracking-tight font-display ${toneValue}`}
+      >
         {value}
       </p>
       {sublabel ? (
-        <p className="relative mt-1 text-xs text-fg-subtle truncate font-description">
+        <p className={`relative mt-1 text-xs truncate font-description ${toneSub}`}>
           {sublabelKey ? <T id={sublabelKey} fallback={sublabel} /> : sublabel}
         </p>
       ) : null}

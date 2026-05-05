@@ -31,11 +31,11 @@ export default async function AppLayout({
   return (
     <>
       <PublicHeader signedInUser={signedInUser} />
-      <main className="flex-1 w-full px-4 sm:px-6 lg:px-10 xl:px-14 py-8 sm:py-10 max-w-[1400px] mx-auto animate-fade-in">
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-20 py-8 sm:py-10 animate-fade-in">
         {children}
       </main>
       <footer className="mt-auto border-t border-border/80 w-full">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 py-6 flex flex-wrap items-center justify-between gap-2 text-xs text-fg-subtle">
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-20 py-6 flex flex-wrap items-center justify-between gap-2 text-xs text-fg-subtle">
           <span>© {new Date().getFullYear()} Bryan 郭檍祥 · Tencent Cloud</span>
           <span className="font-medium">EdgeOne Solutions Architect Intern</span>
         </div>
