@@ -9,6 +9,7 @@
     "clean": "rm -rf .next node_modules/.cache tsconfig.tsbuildinfo",
     "reinstall": "rm -rf .next node_modules/.cache node_modules package-lock.json tsconfig.tsbuildinfo && npm install",
     "build": "prisma generate && prisma db push --accept-data-loss --skip-generate && next build",
+    "vercel-build": "cp prisma/schema.postgres.prisma prisma/schema.prisma && prisma generate && prisma db push --accept-data-loss --skip-generate && next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
