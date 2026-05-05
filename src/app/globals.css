@@ -67,17 +67,23 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
-    "Helvetica Neue", "Segoe UI", Roboto, Inter, Arial, sans-serif;
+    "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-feature-settings: "cv11", "ss01", "ss03";
 }
 
-/* Display face — unified under San Francisco. `.font-display` is kept as
-   an alias so legacy call-sites still work, but it inherits the SF stack. */
+/* Inter font for descriptions and muted text (loaded via next/font in layout.tsx) */
+.font-description {
+  font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Display face — unified under San Francisco */
 .font-display {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
-    "SF Pro Text", "Helvetica Neue", Inter, sans-serif;
+    "SF Pro Text", "Helvetica Neue", Roboto, sans-serif;
   letter-spacing: -0.02em;
 }
 

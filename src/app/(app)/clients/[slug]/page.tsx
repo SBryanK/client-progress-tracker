@@ -47,7 +47,7 @@ export default async function ClientDetailPage({
 
   return (
     <div className="flex flex-col gap-8">
-      <nav aria-label="Breadcrumb" className="text-sm text-fg-muted">
+      <nav aria-label="Breadcrumb" className="text-sm text-fg-muted font-description">
         <Link
           href="/clients"
           className="hover:text-fg transition-colors"
@@ -61,13 +61,13 @@ export default async function ClientDetailPage({
       <header className="flex flex-wrap items-start justify-between gap-4 animate-fade-up">
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-fg">
+            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-fg font-display">
               {client.name}
             </h1>
             <StatusBucketBadge bucket={toStatusBucket(client.status)} />
           </div>
           {client.summary ? (
-            <p className="mt-3 text-sm sm:text-base text-fg-muted max-w-3xl leading-relaxed">
+            <p className="mt-3 text-sm sm:text-base text-fg-muted max-w-3xl leading-relaxed font-description">
               {client.summary}
             </p>
           ) : null}
@@ -93,21 +93,21 @@ export default async function ClientDetailPage({
       {/* summary already rendered inside header */}
 
       <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Card>
+        <Card className="bg-gradient-to-br from-bg to-bg-subtle">
           <div className="flex items-center justify-between gap-2">
             <CardTitle as="h2">Weekly updates</CardTitle>
             {isOwner ? (
               <Link
                 href={`/weekly/new?client=${encodeURIComponent(client.slug)}`}
-                className="text-sm text-accent hover:underline"
+                className="text-sm text-accent hover:underline font-description"
               >
                 + Log another →
               </Link>
             ) : null}
           </div>
-          <CardDescription>Historical progress, newest first.</CardDescription>
+          <CardDescription className="font-description">Historical progress, newest first.</CardDescription>
           {client.weeklyUpdates.length === 0 ? (
-            <p className="mt-4 text-sm text-fg-muted">
+            <p className="mt-4 text-sm text-fg-muted font-description">
               No weekly updates yet.
               {isOwner ? (
                 <>
@@ -125,34 +125,31 @@ export default async function ClientDetailPage({
             <div className="mt-4 max-h-[60vh] overflow-y-auto pr-1 scroll-contain">
               <ul className="space-y-4">
               {client.weeklyUpdates.map((u) => (
-                <li key={u.id} className="rounded-lg border border-border p-4">
+                <li key={u.id} className="rounded-lg border border-border/50 bg-bg-subtle/30 p-4 hover:bg-bg-subtle/50 transition-colors">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium">
+                    <p className="font-medium font-display">
                       {u.weekLabel || formatWeekRange(u.weekStart)}
                     </p>
                     <span className="text-xs text-fg-subtle font-mono">
                       {format(u.weekStart, "yyyy-MM-dd")}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm prose-entry whitespace-pre-line">
+                  <p className="mt-2 text-sm prose-entry whitespace-pre-line font-description">
                     {u.bullets}
                   </p>
                   {u.highlights ? (
-                    <p className="mt-2 text-xs text-fg-muted">
-                      <span className="font-medium">Highlights:</span>{" "}
-                      {u.highlights}
+                    <p className="mt-2 text-xs text-fg-muted font-description">
+                      <span className="font-medium">Highlights:</span> {u.highlights}
                     </p>
                   ) : null}
                   {u.blockers ? (
-                    <p className="mt-1 text-xs text-warning">
-                      <span className="font-medium">Blockers:</span>{" "}
-                      {u.blockers}
+                    <p className="mt-1 text-xs text-warning font-description">
+                      <span className="font-medium">Blockers:</span> {u.blockers}
                     </p>
                   ) : null}
                   {u.nextAction ? (
-                    <p className="mt-1 text-xs text-info">
-                      <span className="font-medium">Next action:</span>{" "}
-                      {u.nextAction}
+                    <p className="mt-1 text-xs text-info font-description">
+                      <span className="font-medium">Next action:</span> {u.nextAction}
                     </p>
                   ) : null}
                 </li>

@@ -1,6 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+
+// Inter — used across body text (descriptions, muted copy). Loaded via
+// next/font so it's self-hosted and doesn't incur a layout shift. Exposes
+// a CSS variable so the .font-description utility can reference it.
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "Client Progress Tracker",
@@ -45,7 +55,7 @@ export default function RootLayout({
     } catch (e) {}
   `;
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>

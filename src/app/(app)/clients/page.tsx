@@ -124,11 +124,11 @@ export default async function AllClientsPage({
       {/* ═══ Header ═══════════════════════════════════════════════════ */}
       <header className="flex flex-wrap items-end justify-between gap-4 animate-fade-up">
         <div className="min-w-0">
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight font-display">
             <T id="clients.title" fallback="All clients" />
           </h1>
           {bucketFilter ? (
-            <p className="mt-1.5 text-sm text-fg-muted">
+            <p className="mt-1.5 text-sm text-fg-muted font-description">
               <T id="clients.showing" fallback="Showing" />{" "}
               <span className="font-medium text-fg">
                 <T
@@ -192,19 +192,19 @@ export default async function AllClientsPage({
             <li key={c.id} className="animate-fade-up">
               <Link
                 href={`/clients/${c.slug}`}
-                className="card-hover group relative block overflow-hidden rounded-2xl border border-border bg-bg p-5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent h-full"
+                className="card-hover group relative block overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-bg to-bg-subtle p-5 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent h-full transition-all"
               >
                 <span
                   aria-hidden
-                  className={`absolute inset-x-0 top-0 h-0.5 ${accentBar} opacity-60 group-hover:opacity-100 transition-opacity`}
+                  className={`absolute inset-x-0 top-0 h-1 ${accentBar} opacity-70 group-hover:opacity-100 transition-opacity`}
                 />
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-lg font-semibold truncate text-fg group-hover:text-accent transition-colors">
+                    <p className="text-lg font-semibold truncate text-fg group-hover:text-accent transition-colors font-display">
                       {c.name}
                     </p>
                     {c.summary ? (
-                      <p className="mt-1 text-sm text-fg-muted line-clamp-2">
+                      <p className="mt-1 text-sm text-fg-muted line-clamp-2 font-description">
                         {c.summary}
                       </p>
                     ) : null}
@@ -213,12 +213,12 @@ export default async function AllClientsPage({
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-border/70 flex items-center justify-between gap-2">
+                <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between gap-2">
                   <ClientLastUpdateLabel
                     iso={last.toISOString()}
                     hasUpdate={c.weeklyUpdates.length > 0 || c.activities.length > 0}
                   />
-                  <span className="text-xs font-medium text-accent opacity-0 translate-x-[-4px] group-hover:opacity-100 group-hover:translate-x-0 transition-all">
+                  <span className="text-xs font-medium text-accent opacity-0 translate-x-[-4px] group-hover:opacity-100 group-hover:translate-x-0 transition-all font-description">
                     <T id="clients.open" fallback="Open →" />
                   </span>
                 </div>

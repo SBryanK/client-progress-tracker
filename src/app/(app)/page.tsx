@@ -57,7 +57,7 @@ export default async function LandingPage() {
           </p>
           <h1
             id="hero-title"
-            className="mt-4 text-3xl leading-[1.05] sm:text-4xl lg:text-5xl font-semibold tracking-tight text-balance"
+            className="mt-4 text-3xl leading-[1.05] sm:text-4xl lg:text-5xl font-semibold tracking-tight text-balance font-display"
           >
             <T id="hero.title.prefix" fallback="Weekly progress, " />{" "}
             <span className="text-gradient whitespace-nowrap">
@@ -149,10 +149,10 @@ export default async function LandingPage() {
                 <T id="recent.eyebrow" fallback="Timeline" />
               </span>
             </div>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight">
+            <h2 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight font-display">
               <T id="recent.title" fallback="Recent updates" />
             </h2>
-            <p className="mt-1 text-sm text-fg-muted">
+            <p className="mt-1 text-sm text-fg-muted font-description">
               <T
                 id="recent.sub"
                 fallback="The most recent weekly logs across all clients."
@@ -180,10 +180,10 @@ export default async function LandingPage() {
               <li key={u.id}>
                 <Link
                   href={`/clients/${u.client.slug}`}
-                  className="card-hover block rounded-2xl border border-border bg-bg p-5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent h-full"
+                  className="card-hover block rounded-2xl border border-border/50 bg-gradient-to-br from-bg to-bg-subtle p-5 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent h-full transition-all"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold truncate text-fg">
+                    <p className="font-semibold truncate text-fg font-display">
                       {u.client.name}
                     </p>
                     <StatusBucketBadge
@@ -193,7 +193,7 @@ export default async function LandingPage() {
                   <p className="mt-0.5 text-xs text-fg-subtle font-mono">
                     {u.weekLabel || formatWeekRange(u.weekStart)}
                   </p>
-                  <p className="mt-3 text-sm prose-entry text-fg-muted line-clamp-4 break-words">
+                  <p className="mt-3 text-sm prose-entry text-fg-muted line-clamp-4 break-words font-description">
                     {u.bullets}
                   </p>
                 </Link>
@@ -237,7 +237,7 @@ function StatCard({
     warning: "bg-warning/5",
   }[tone];
   return (
-    <div className="card-hover group relative overflow-hidden rounded-2xl border border-border bg-bg p-5 shadow-sm">
+    <div className="card-hover group relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-bg to-bg-subtle p-5 shadow-sm">
       <span
         aria-hidden
         className={`absolute inset-x-0 top-0 h-0.5 ${accentBar}`}
@@ -246,14 +246,14 @@ function StatCard({
         aria-hidden
         className={`absolute -top-10 -right-10 h-32 w-32 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity ${glowBg}`}
       />
-      <p className="relative text-[11px] uppercase tracking-[0.08em] text-fg-subtle font-semibold">
+      <p className="relative text-[11px] uppercase tracking-[0.08em] text-fg-subtle font-semibold font-description">
         {labelKey ? <T id={labelKey} fallback={label} /> : label}
       </p>
-      <p className="relative mt-3 text-4xl font-semibold tabular-nums tracking-tight">
+      <p className="relative mt-3 text-4xl font-semibold tabular-nums tracking-tight font-display">
         {value}
       </p>
       {sublabel ? (
-        <p className="relative mt-1 text-xs text-fg-subtle truncate">
+        <p className="relative mt-1 text-xs text-fg-subtle truncate font-description">
           {sublabelKey ? <T id={sublabelKey} fallback={sublabel} /> : sublabel}
         </p>
       ) : null}

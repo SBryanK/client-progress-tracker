@@ -69,10 +69,10 @@ export default async function DashboardPage() {
             <Activity className="h-3 w-3" aria-hidden />
             Owner dashboard
           </span>
-          <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight">
+          <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight font-display">
             Pulse check
           </h1>
-          <p className="mt-1.5 text-sm text-fg-muted">
+          <p className="mt-1.5 text-sm text-fg-muted font-description">
             Quick pulse of every client, this week&apos;s updates, and what
             needs attention.
           </p>
@@ -113,8 +113,8 @@ export default async function DashboardPage() {
       <section aria-label="Status distribution" className="animate-fade-up">
         <div className="flex items-baseline justify-between gap-4 mb-5">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Pipeline</h2>
-            <p className="mt-0.5 text-sm text-fg-muted">
+            <h2 className="text-2xl font-semibold tracking-tight font-display">Pipeline</h2>
+            <p className="mt-0.5 text-sm text-fg-muted font-description">
               Three buckets, click to drill in.
             </p>
           </div>
@@ -129,18 +129,18 @@ export default async function DashboardPage() {
               <Link
                 key={b}
                 href={`/clients?bucket=${b}`}
-                className="card-hover press group rounded-2xl border border-border bg-bg p-5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="card-hover press group rounded-2xl border border-border/50 bg-gradient-to-br from-bg to-bg-subtle p-5 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-all"
               >
                 <div className="flex items-center justify-between">
                   <StatusBucketBadge bucket={b} />
-                  <span className="text-[11px] tabular-nums text-fg-subtle">
+                  <span className="text-[11px] tabular-nums text-fg-subtle font-description">
                     {pct}%
                   </span>
                 </div>
-                <p className="mt-4 text-3xl font-semibold tabular-nums">
+                <p className="mt-4 text-3xl font-semibold tabular-nums font-display">
                   {count}
                 </p>
-                <p className="mt-1 text-xs text-fg-subtle">
+                <p className="mt-1 text-xs text-fg-subtle font-description">
                   {STATUS_BUCKET_LABEL[b]}
                 </p>
                 <div className="mt-3 h-1 w-full rounded-full bg-bg-muted overflow-hidden">
@@ -158,12 +158,12 @@ export default async function DashboardPage() {
       {/* ═══ Stale + Latest ═══════════════════════════════════════════ */}
       <section
         aria-label="Needs an update & latest"
-        className="grid gap-4 lg:grid-cols-2"
+        className="grid gap-6 lg:grid-cols-2"
       >
-        <Card>
+        <Card className="bg-gradient-to-br from-bg to-bg-subtle">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle as="h2">
+              <CardTitle as="h2" className="font-display">
                 <span className="inline-flex items-center gap-2">
                   <span className="grid h-7 w-7 place-items-center rounded-lg bg-warning/10 text-warning">
                     <Clock className="h-3.5 w-3.5" aria-hidden />
@@ -171,23 +171,23 @@ export default async function DashboardPage() {
                   Needs an update
                 </span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="font-description">
                 Clients without a weekly log in the last 14 days.
               </CardDescription>
             </div>
             <Link
               href="/clients"
-              className="text-sm text-accent hover:underline inline-flex items-center gap-1"
+              className="text-sm text-accent hover:underline inline-flex items-center gap-1 font-description"
             >
               See all <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </div>
           {stale.length === 0 ? (
-            <p className="mt-4 text-sm text-fg-muted">
+            <p className="mt-4 text-sm text-fg-muted font-description">
               Everyone has a recent update — nice work.
             </p>
           ) : (
-            <ul className="mt-4 divide-y divide-border">
+            <ul className="mt-4 divide-y divide-border/50">
               {stale.map((c) => {
                 const last = c.weeklyUpdates[0];
                 return (
@@ -199,8 +199,8 @@ export default async function DashboardPage() {
                       href={`/clients/${c.slug}`}
                       className="min-w-0 flex-1 hover:underline"
                     >
-                      <p className="font-medium truncate">{c.name}</p>
-                      <p className="text-xs text-fg-muted">
+                      <p className="font-medium truncate font-display">{c.name}</p>
+                      <p className="text-xs text-fg-muted font-description">
                         {last
                           ? `Last update ${formatDistanceToNow(last.weekStart, { addSuffix: true })}`
                           : "No weekly update yet"}
@@ -214,23 +214,23 @@ export default async function DashboardPage() {
           )}
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50/40 to-green-100/30 border-green-200/60">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle as="h2">Latest weekly updates</CardTitle>
-              <CardDescription>
+              <CardTitle as="h2" className="font-display">Latest weekly updates</CardTitle>
+              <CardDescription className="font-description">
                 The most recent bullet logs across all clients.
               </CardDescription>
             </div>
             <Link
               href="/weekly"
-              className="text-sm text-accent hover:underline inline-flex items-center gap-1"
+              className="text-sm text-accent hover:underline inline-flex items-center gap-1 font-description"
             >
               Timeline <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </div>
           {latestUpdates.length === 0 ? (
-            <p className="mt-4 text-sm text-fg-muted">
+            <p className="mt-4 text-sm text-fg-muted font-description">
               No weekly updates yet.
             </p>
           ) : (
@@ -238,12 +238,12 @@ export default async function DashboardPage() {
               {latestUpdates.map((u) => (
                 <li
                   key={u.id}
-                  className="card-hover rounded-xl border border-border p-3"
+                  className="card-hover rounded-xl border border-green-200/40 bg-green-50/30 p-3 hover:bg-green-50/50 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <Link
                       href={`/clients/${u.client.slug}`}
-                      className="font-medium truncate hover:underline"
+                      className="font-medium truncate hover:underline font-display"
                     >
                       {u.client.name}
                     </Link>
@@ -251,7 +251,7 @@ export default async function DashboardPage() {
                       {u.weekLabel || formatWeekRange(u.weekStart)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-fg-muted prose-entry line-clamp-3">
+                  <p className="mt-1 text-sm text-fg-muted prose-entry line-clamp-3 font-description">
                     {u.bullets}
                   </p>
                 </li>
@@ -279,14 +279,29 @@ function StatCard({
     success: "bg-success",
     warning: "bg-warning",
   }[tone];
+  
+  const bgGradient = {
+    neutral: "bg-gradient-to-br from-bg to-bg-subtle",
+    info: "bg-gradient-to-br from-blue-50/30 to-blue-100/20",
+    success: "bg-gradient-to-br from-green-50/30 to-green-100/20",
+    warning: "bg-gradient-to-br from-amber-50/30 to-amber-100/20",
+  }[tone];
+  
+  const borderColor = {
+    neutral: "border-border",
+    info: "border-blue-200/50",
+    success: "border-green-200/50",
+    warning: "border-amber-200/50",
+  }[tone];
+  
   return (
-    <div className="card-hover relative overflow-hidden rounded-2xl border border-border bg-bg p-5 shadow-sm">
+    <div className={`card-hover relative overflow-hidden rounded-2xl border ${borderColor} ${bgGradient} p-5 shadow-sm`}>
       <span
         aria-hidden
         className={`absolute inset-x-0 top-0 h-0.5 ${accentBar}`}
       />
-      <p className="text-xs uppercase tracking-wider text-fg-subtle">{label}</p>
-      <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight">
+      <p className="text-xs uppercase tracking-wider text-fg-subtle font-description">{label}</p>
+      <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight font-display">
         {value}
       </p>
     </div>

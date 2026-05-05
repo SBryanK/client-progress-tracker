@@ -40,3 +40,4 @@ Thumbs.db
 
 # Imports / user data (don't push the personal Word doc)
 Bryan's+Client+Involvement+Progress+(Intern+Edition).docx
+*.tsbuildinfo
