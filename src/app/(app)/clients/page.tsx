@@ -183,28 +183,43 @@ export default async function AllClientsPage({
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 stagger">
           {rows.map(({ c, last }) => {
             const bucket = toStatusBucket(c.status);
-            const accentBar = {
-              ACTIVE: "bg-success",
-              ON_GOING: "bg-info",
-              IDLE: "bg-warning",
+            // Full-box tint per bucket — medium saturation (not soft).
+            const bucketCard = {
+              ACTIVE:
+                "border-emerald-300/70 bg-gradient-to-br from-emerald-100 to-emerald-200/70 dark:from-emerald-500/25 dark:to-emerald-500/10 dark:border-emerald-400/30",
+              ON_GOING:
+                "border-sky-300/70 bg-gradient-to-br from-sky-100 to-sky-200/70 dark:from-sky-500/25 dark:to-sky-500/10 dark:border-sky-400/30",
+              IDLE:
+                "border-amber-300/70 bg-gradient-to-br from-amber-100 to-amber-200/70 dark:from-amber-500/25 dark:to-amber-500/10 dark:border-amber-400/30",
+            }[bucket];
+            const bucketName = {
+              ACTIVE: "text-emerald-900 dark:text-emerald-50",
+              ON_GOING: "text-sky-900 dark:text-sky-50",
+              IDLE: "text-amber-900 dark:text-amber-50",
+            }[bucket];
+            const bucketSummary = {
+              ACTIVE: "text-emerald-800/80 dark:text-emerald-200/80",
+              ON_GOING: "text-sky-800/80 dark:text-sky-200/80",
+              IDLE: "text-amber-800/80 dark:text-amber-200/80",
+            }[bucket];
+            const bucketDivider = {
+              ACTIVE: "border-emerald-300/60 dark:border-emerald-400/20",
+              ON_GOING: "border-sky-300/60 dark:border-sky-400/20",
+              IDLE: "border-amber-300/60 dark:border-amber-400/20",
             }[bucket];
             return (
             <li key={c.id} className="animate-fade-up">
               <Link
                 href={`/clients/${c.slug}`}
-                className="card-hover group relative block overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-bg to-bg-subtle p-5 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent h-full transition-all"
+                className={`card-hover group relative block overflow-hidden rounded-2xl border p-5 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent h-full transition-all ${bucketCard}`}
               >
-                <span
-                  aria-hidden
-                  className={`absolute inset-x-0 top-0 h-1 ${accentBar} opacity-70 group-hover:opacity-100 transition-opacity`}
-                />
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-lg font-semibold truncate text-fg group-hover:text-accent transition-colors font-display">
+                    <p className={`text-lg font-semibold truncate transition-colors font-display ${bucketName}`}>
                       {c.name}
                     </p>
                     {c.summary ? (
-                      <p className="mt-1 text-sm text-fg-muted line-clamp-2 font-description">
+                      <p className={`mt-1 text-sm line-clamp-2 font-description ${bucketSummary}`}>
                         {c.summary}
                       </p>
                     ) : null}
@@ -213,12 +228,12 @@ export default async function AllClientsPage({
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between gap-2">
+                <div className={`mt-4 pt-3 border-t flex items-center justify-between gap-2 ${bucketDivider}`}>
                   <ClientLastUpdateLabel
                     iso={last.toISOString()}
                     hasUpdate={c.weeklyUpdates.length > 0 || c.activities.length > 0}
                   />
-                  <span className="text-xs font-medium text-accent opacity-0 translate-x-[-4px] group-hover:opacity-100 group-hover:translate-x-0 transition-all font-description">
+                  <span className={`text-xs font-medium opacity-0 translate-x-[-4px] group-hover:opacity-100 group-hover:translate-x-0 transition-all font-description ${bucketName}`}>
                     <T id="clients.open" fallback="Open →" />
                   </span>
                 </div>

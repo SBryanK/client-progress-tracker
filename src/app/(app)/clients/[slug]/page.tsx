@@ -92,8 +92,8 @@ export default async function ClientDetailPage({
 
       {/* summary already rendered inside header */}
 
-      <section className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Card className="bg-gradient-to-br from-bg to-bg-subtle">
+      <section className="grid gap-4">
+        <Card className="bg-gradient-to-br from-bg to-bg-subtle w-full">
           <div className="flex items-center justify-between gap-2">
             <CardTitle as="h2">Weekly updates</CardTitle>
             {isOwner ? (
@@ -159,29 +159,27 @@ export default async function ClientDetailPage({
           )}
         </Card>
 
-        <div className="flex flex-col gap-4">
-          {isOwner ? (
-            <Card>
-              <CardTitle as="h2">Quick add</CardTitle>
-              <CardDescription>
-                For a full composer use{" "}
-                <Link
-                  href={`/weekly/new?client=${encodeURIComponent(client.slug)}`}
-                  className="text-accent hover:underline"
-                >
-                  the composer
-                </Link>
-                .
-              </CardDescription>
-              <div className="mt-3">
-                <WeeklyUpdateForm
-                  clientId={client.id}
-                  defaultStatus={client.status}
-                />
-              </div>
-            </Card>
-          ) : null}
-        </div>
+        {isOwner ? (
+          <Card>
+            <CardTitle as="h2">Quick add</CardTitle>
+            <CardDescription>
+              For a full composer use{" "}
+              <Link
+                href={`/weekly/new?client=${encodeURIComponent(client.slug)}`}
+                className="text-accent hover:underline"
+              >
+                the composer
+              </Link>
+              .
+            </CardDescription>
+            <div className="mt-3">
+              <WeeklyUpdateForm
+                clientId={client.id}
+                defaultStatus={client.status}
+              />
+            </div>
+          </Card>
+        ) : null}
       </section>
 
       <section aria-label="List of works" className="grid gap-4 lg:grid-cols-3">
