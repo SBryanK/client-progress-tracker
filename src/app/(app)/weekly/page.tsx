@@ -109,7 +109,7 @@ export default async function WeeklyPage({
       ) : (
         <ol
           aria-label="Weekly updates, newest first"
-          className="relative pl-10 sm:pl-14 stagger"
+          className="relative pl-14 sm:pl-20 stagger"
         >
           {weekKeys.map((weekKey, idx) => {
             const items = groups.get(weekKey)!;
@@ -126,21 +126,23 @@ export default async function WeeklyPage({
                 className="relative pb-12 last:pb-0 animate-fade-up"
                 aria-labelledby={`wk-${weekKey}`}
               >
-                {/* Vertical connector segment — perfectly centered */}
+                {/* Vertical connector segment — starts below the dot so it
+                    never passes through the label/dot circle. */}
                 {!isLast ? (
                   <span
                     aria-hidden
-                    className={`pointer-events-none absolute left-5 sm:left-7 top-4 bottom-0 w-0.5 ${
+                    className={`pointer-events-none absolute left-6 sm:left-8 top-12 bottom-0 w-0.5 -translate-x-1/2 ${
                       isLatest
                         ? "bg-gradient-to-b from-accent/80 to-border-strong"
                         : "bg-border-strong/60"
                     }`}
                   />
                 ) : null}
-                {/* Rail dot — perfectly centered on the vertical line */}
+                {/* Rail dot — sits in its own gutter, vertically aligned with
+                    the first line of the week heading. */}
                 <span
                   aria-hidden
-                  className={`absolute left-5 sm:left-7 top-4 z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-4 ring-bg ${
+                  className={`absolute left-6 sm:left-8 top-[14px] sm:top-[18px] z-10 h-3.5 w-3.5 -translate-x-1/2 rounded-full ring-4 ring-bg shadow-sm ${
                     isLatest
                       ? "bg-accent animate-pulse-ring"
                       : "bg-border-strong"

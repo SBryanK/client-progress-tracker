@@ -59,7 +59,7 @@ export default async function LandingPage() {
             id="hero-title"
             className="mt-4 text-3xl leading-[1.05] sm:text-4xl lg:text-5xl font-semibold tracking-tight text-balance font-display"
           >
-            <T id="hero.title.prefix" fallback="Weekly progress, " />{" "}
+            <T id="hero.title.prefix" fallback="Weekly Client Progress, " />{" "}
             <span className="text-gradient whitespace-nowrap">
               Bryan 郭檍祥
             </span>
@@ -217,34 +217,34 @@ function StatCard({
   sublabel?: string;
   sublabelKey?: string;
 }) {
-  // Entire card tinted (soft), not just the top bar.
+  // Entire card tinted (bold), not just the top bar.
   const toneCard = {
     neutral:
       "border-border/50 bg-gradient-to-br from-bg to-bg-subtle",
     info:
-      "border-info/25 bg-gradient-to-br from-sky-50 to-sky-100/60 dark:from-sky-500/10 dark:to-sky-500/5",
+      "border-sky-400 bg-gradient-to-br from-sky-200 to-sky-300 dark:from-sky-500/40 dark:to-sky-600/25 dark:border-sky-400/50",
     success:
-      "border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-emerald-100/60 dark:from-emerald-500/10 dark:to-emerald-500/5",
+      "border-emerald-400 bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-500/40 dark:to-emerald-600/25 dark:border-emerald-400/50",
     warning:
-      "border-amber-200/60 bg-gradient-to-br from-amber-50 to-amber-100/60 dark:from-amber-500/10 dark:to-amber-500/5",
+      "border-amber-400 bg-gradient-to-br from-amber-200 to-amber-300 dark:from-amber-500/40 dark:to-amber-600/25 dark:border-amber-400/50",
   }[tone];
   const toneLabel = {
     neutral: "text-fg-subtle",
-    info: "text-sky-700 dark:text-sky-300",
-    success: "text-emerald-700 dark:text-emerald-300",
-    warning: "text-amber-700 dark:text-amber-300",
+    info: "text-sky-900 dark:text-sky-200",
+    success: "text-emerald-900 dark:text-emerald-200",
+    warning: "text-amber-900 dark:text-amber-200",
   }[tone];
   const toneValue = {
     neutral: "text-fg",
-    info: "text-sky-900 dark:text-sky-100",
-    success: "text-emerald-900 dark:text-emerald-100",
-    warning: "text-amber-900 dark:text-amber-100",
+    info: "text-sky-950 dark:text-sky-50",
+    success: "text-emerald-950 dark:text-emerald-50",
+    warning: "text-amber-950 dark:text-amber-50",
   }[tone];
   const toneSub = {
     neutral: "text-fg-subtle",
-    info: "text-sky-700/80 dark:text-sky-300/80",
-    success: "text-emerald-700/80 dark:text-emerald-300/80",
-    warning: "text-amber-700/80 dark:text-amber-300/80",
+    info: "text-sky-800/85 dark:text-sky-200/85",
+    success: "text-emerald-800/85 dark:text-emerald-200/85",
+    warning: "text-amber-800/85 dark:text-amber-200/85",
   }[tone];
   return (
     <div

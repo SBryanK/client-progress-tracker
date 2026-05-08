@@ -183,29 +183,29 @@ export default async function AllClientsPage({
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 stagger">
           {rows.map(({ c, last }) => {
             const bucket = toStatusBucket(c.status);
-            // Full-box tint per bucket — medium saturation (not soft).
+            // Full-box tint per bucket — bold saturation (clearly visible).
             const bucketCard = {
               ACTIVE:
-                "border-emerald-300/70 bg-gradient-to-br from-emerald-100 to-emerald-200/70 dark:from-emerald-500/25 dark:to-emerald-500/10 dark:border-emerald-400/30",
+                "border-emerald-400 bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-500/40 dark:to-emerald-600/25 dark:border-emerald-400/50",
               ON_GOING:
-                "border-sky-300/70 bg-gradient-to-br from-sky-100 to-sky-200/70 dark:from-sky-500/25 dark:to-sky-500/10 dark:border-sky-400/30",
+                "border-sky-400 bg-gradient-to-br from-sky-200 to-sky-300 dark:from-sky-500/40 dark:to-sky-600/25 dark:border-sky-400/50",
               IDLE:
-                "border-amber-300/70 bg-gradient-to-br from-amber-100 to-amber-200/70 dark:from-amber-500/25 dark:to-amber-500/10 dark:border-amber-400/30",
+                "border-amber-400 bg-gradient-to-br from-amber-200 to-amber-300 dark:from-amber-500/40 dark:to-amber-600/25 dark:border-amber-400/50",
             }[bucket];
             const bucketName = {
-              ACTIVE: "text-emerald-900 dark:text-emerald-50",
-              ON_GOING: "text-sky-900 dark:text-sky-50",
-              IDLE: "text-amber-900 dark:text-amber-50",
+              ACTIVE: "text-emerald-950 dark:text-emerald-50",
+              ON_GOING: "text-sky-950 dark:text-sky-50",
+              IDLE: "text-amber-950 dark:text-amber-50",
             }[bucket];
             const bucketSummary = {
-              ACTIVE: "text-emerald-800/80 dark:text-emerald-200/80",
-              ON_GOING: "text-sky-800/80 dark:text-sky-200/80",
-              IDLE: "text-amber-800/80 dark:text-amber-200/80",
+              ACTIVE: "text-emerald-900/85 dark:text-emerald-100/85",
+              ON_GOING: "text-sky-900/85 dark:text-sky-100/85",
+              IDLE: "text-amber-900/85 dark:text-amber-100/85",
             }[bucket];
             const bucketDivider = {
-              ACTIVE: "border-emerald-300/60 dark:border-emerald-400/20",
-              ON_GOING: "border-sky-300/60 dark:border-sky-400/20",
-              IDLE: "border-amber-300/60 dark:border-amber-400/20",
+              ACTIVE: "border-emerald-400/70 dark:border-emerald-400/30",
+              ON_GOING: "border-sky-400/70 dark:border-sky-400/30",
+              IDLE: "border-amber-400/70 dark:border-amber-400/30",
             }[bucket];
             return (
             <li key={c.id} className="animate-fade-up">
