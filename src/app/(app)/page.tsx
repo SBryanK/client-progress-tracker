@@ -101,10 +101,10 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ Stats row ══════════════════════════════════════════════════ */}
+      {/* ═══ Stats row ═══════════════════════════════════════════════════════ */}
       <section
         aria-label="Pipeline snapshot"
-        className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 stagger animate-fade-up"
+        className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 stagger animate-fade-up"
       >
         <StatCard
           labelKey="stat.total"
@@ -120,6 +120,21 @@ export default async function LandingPage() {
           tone="success"
           sublabelKey="stat.active.sub"
           sublabel="Currently moving"
+        />
+        <StatCard
+          labelKey="stat.onwork"
+          label="On-work"
+          value={bucketCounts.ON_WORK}
+          tone="purple"
+          sublabelKey="stat.onwork.sub"
+          sublabel="Deep engagement · priority"
+        />
+        <StatCard
+          labelKey="stat.ongoing"          label="On-work"
+          value={bucketCounts.ON_WORK}
+          tone="purple"
+          sublabelKey="stat.onwork.sub"
+          sublabel="Deep engagement · priority"
         />
         <StatCard
           labelKey="stat.ongoing"
@@ -138,7 +153,6 @@ export default async function LandingPage() {
           sublabel="Paused / low priority"
         />
       </section>
-
       {/* ═══ Recent updates ═════════════════════════════ */}
       <section aria-label="Recent updates" className="animate-fade-up">
         <div className="flex items-end justify-between gap-4 mb-5 flex-wrap">
@@ -213,7 +227,7 @@ function StatCard({
   label: string;
   labelKey?: string;
   value: number;
-  tone?: "neutral" | "info" | "success" | "warning";
+  tone?: "neutral" | "info" | "success" | "warning" | "purple";
   sublabel?: string;
   sublabelKey?: string;
 }) {
@@ -227,24 +241,29 @@ function StatCard({
       "border-emerald-400 bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-500/40 dark:to-emerald-600/25 dark:border-emerald-400/50",
     warning:
       "border-amber-400 bg-gradient-to-br from-amber-200 to-amber-300 dark:from-amber-500/40 dark:to-amber-600/25 dark:border-amber-400/50",
+    purple:
+      "border-purple-400 bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-500/40 dark:to-purple-600/25 dark:border-purple-400/50",
   }[tone];
   const toneLabel = {
     neutral: "text-fg-subtle",
     info: "text-sky-900 dark:text-sky-200",
     success: "text-emerald-900 dark:text-emerald-200",
     warning: "text-amber-900 dark:text-amber-200",
+    purple: "text-purple-900 dark:text-purple-200",
   }[tone];
   const toneValue = {
     neutral: "text-fg",
     info: "text-sky-950 dark:text-sky-50",
     success: "text-emerald-950 dark:text-emerald-50",
     warning: "text-amber-950 dark:text-amber-50",
+    purple: "text-purple-950 dark:text-purple-50",
   }[tone];
   const toneSub = {
     neutral: "text-fg-subtle",
     info: "text-sky-800/85 dark:text-sky-200/85",
     success: "text-emerald-800/85 dark:text-emerald-200/85",
     warning: "text-amber-800/85 dark:text-amber-200/85",
+    purple: "text-purple-800/85 dark:text-purple-200/85",
   }[tone];
   return (
     <div

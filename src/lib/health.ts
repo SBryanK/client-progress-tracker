@@ -62,6 +62,7 @@ export function computeHealth(input: HealthInput): HealthResult {
   // 2) Status — 25 points.
   const statusTable: Record<ClientStatus, number> = {
     ACTIVE: 25,
+    ON_WORK: 25,
     DEAL: 24,
     FINISHED: 20,
     POTENTIAL: 18,

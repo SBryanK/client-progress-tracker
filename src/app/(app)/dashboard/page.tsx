@@ -86,16 +86,21 @@ export default async function DashboardPage() {
         </Link>
       </header>
 
-      {/* ═══ Stats ═══════════════════════════════════════════════════════ */}
+      {/* ═══ Stats ════════════════════════════════════════════════════════════ */}
       <section
         aria-label="Stats"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 stagger"
       >
         <StatCard label="Total clients" value={clients.length} />
         <StatCard
           label="Active"
           value={bucketCounts.ACTIVE}
           tone="success"
+        />
+        <StatCard
+          label="On-work"
+          value={bucketCounts.ON_WORK}
+          tone="purple"
         />
         <StatCard
           label="On-going"
@@ -108,18 +113,17 @@ export default async function DashboardPage() {
           tone="warning"
         />
       </section>
-
       {/* ═══ Buckets ════════════════════════════════════════════════════════════════ */}
       <section aria-label="Status distribution" className="animate-fade-up">
         <div className="flex items-baseline justify-between gap-4 mb-5">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight font-display">Pipeline</h2>
             <p className="mt-0.5 text-sm text-fg-muted font-description">
-              Three buckets, click to drill in.
+              Four buckets, click to drill in.
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">          {STATUS_BUCKETS.map((b) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">          {STATUS_BUCKETS.map((b) => {
             const count = bucketCounts[b];
             const pct =
               clients.length > 0
@@ -271,13 +275,14 @@ function StatCard({
 }: {
   label: string;
   value: number;
-  tone?: "neutral" | "info" | "success" | "warning";
+  tone?: "neutral" | "info" | "success" | "warning" | "purple";
 }) {
   const accentBar = {
     neutral: "bg-fg-subtle/30",
     info: "bg-info",
     success: "bg-success",
     warning: "bg-warning",
+    purple: "bg-purple-500",
   }[tone];
   
   const bgGradient = {
@@ -285,6 +290,7 @@ function StatCard({
     info: "bg-gradient-to-br from-blue-50/30 to-blue-100/20",
     success: "bg-gradient-to-br from-green-50/30 to-green-100/20",
     warning: "bg-gradient-to-br from-amber-50/30 to-amber-100/20",
+    purple: "bg-gradient-to-br from-purple-50/40 to-purple-100/30 dark:from-purple-500/10 dark:to-purple-600/5",
   }[tone];
   
   const borderColor = {
@@ -292,6 +298,7 @@ function StatCard({
     info: "border-blue-200/50",
     success: "border-green-200/50",
     warning: "border-amber-200/50",
+    purple: "border-purple-300/60 dark:border-purple-400/30",
   }[tone];
   
   return (

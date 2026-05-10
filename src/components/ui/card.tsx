@@ -68,7 +68,13 @@ export function CardDescription({
   );
 }
 
-export type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
+export type BadgeTone =
+  | "neutral"
+  | "info"
+  | "success"
+  | "warning"
+  | "danger"
+  | "purple";
 
 export function Badge({
   className,
@@ -87,6 +93,8 @@ export function Badge({
     success: "bg-success/10 text-success ring-success/20",
     warning: "bg-warning/10 text-warning ring-warning/20",
     danger: "bg-danger/10 text-danger ring-danger/20",
+    purple:
+      "bg-purple-500/10 text-purple-700 ring-purple-500/25 dark:text-purple-300",
   }[tone];
   const dotColour = {
     neutral: "bg-fg-subtle",
@@ -94,6 +102,7 @@ export function Badge({
     success: "bg-success",
     warning: "bg-warning",
     danger: "bg-danger",
+    purple: "bg-purple-500",
   }[tone];
   return (
     <span

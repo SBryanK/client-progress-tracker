@@ -91,6 +91,7 @@ export const DICT: Dict = {
 
   // ── Status bucket labels ──────────────────────────────────────────
   "bucket.ACTIVE": { en: "Active", zh: "进行中" },
+  "bucket.ON_WORK": { en: "On-work", zh: "深度跟进" },
   "bucket.ON_GOING": { en: "On-going", zh: "长期跟进" },
   "bucket.IDLE": { en: "Idle", zh: "闲置" },
 

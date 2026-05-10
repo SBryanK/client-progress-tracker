@@ -187,6 +187,8 @@ export default async function AllClientsPage({
             const bucketCard = {
               ACTIVE:
                 "border-emerald-400 bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-500/40 dark:to-emerald-600/25 dark:border-emerald-400/50",
+              ON_WORK:
+                "border-purple-400 bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-500/40 dark:to-purple-600/25 dark:border-purple-400/50",
               ON_GOING:
                 "border-sky-400 bg-gradient-to-br from-sky-200 to-sky-300 dark:from-sky-500/40 dark:to-sky-600/25 dark:border-sky-400/50",
               IDLE:
@@ -194,16 +196,19 @@ export default async function AllClientsPage({
             }[bucket];
             const bucketName = {
               ACTIVE: "text-emerald-950 dark:text-emerald-50",
+              ON_WORK: "text-purple-950 dark:text-purple-50",
               ON_GOING: "text-sky-950 dark:text-sky-50",
               IDLE: "text-amber-950 dark:text-amber-50",
             }[bucket];
             const bucketSummary = {
               ACTIVE: "text-emerald-900/85 dark:text-emerald-100/85",
+              ON_WORK: "text-purple-900/85 dark:text-purple-100/85",
               ON_GOING: "text-sky-900/85 dark:text-sky-100/85",
               IDLE: "text-amber-900/85 dark:text-amber-100/85",
             }[bucket];
             const bucketDivider = {
               ACTIVE: "border-emerald-400/70 dark:border-emerald-400/30",
+              ON_WORK: "border-purple-400/70 dark:border-purple-400/30",
               ON_GOING: "border-sky-400/70 dark:border-sky-400/30",
               IDLE: "border-amber-400/70 dark:border-amber-400/30",
             }[bucket];

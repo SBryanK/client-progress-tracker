@@ -14,6 +14,7 @@
 
 export const CLIENT_STATUSES = [
   "ACTIVE",
+  "ON_WORK",
   "POTENTIAL",
   "DEAL",
   "PENDING",
@@ -29,6 +30,7 @@ export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
 export const STATUS_LABEL: Record<ClientStatus, string> = {
   ACTIVE: "Active",
+  ON_WORK: "On-work",
   POTENTIAL: "On-going",
   DEAL: "On-going",
   PENDING: "On-going",
@@ -42,9 +44,10 @@ export const STATUS_LABEL: Record<ClientStatus, string> = {
 
 export const STATUS_TONE: Record<
   ClientStatus,
-  "neutral" | "info" | "success" | "warning" | "danger"
+  "neutral" | "info" | "success" | "warning" | "danger" | "purple"
 > = {
   ACTIVE: "success",
+  ON_WORK: "purple",
   POTENTIAL: "info",
   DEAL: "info",
   PENDING: "info",
@@ -60,11 +63,12 @@ export const CLIENT_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 export type ClientPriority = (typeof CLIENT_PRIORITIES)[number];
 
 export function statusOptions() {
-  // Only the three buckets are exposed in forms.
+  // Only the four buckets are exposed in forms.
   return [
     { value: "ACTIVE", label: "Active" },
-    { value: "INACTIVE", label: "Idle" },
+    { value: "ON_WORK", label: "On-work" },
     { value: "POTENTIAL", label: "On-going" },
+    { value: "INACTIVE", label: "Idle" },
   ];
 }
 
@@ -75,24 +79,27 @@ export function priorityOptions() {
   }));
 }
 
-// ── High-level status buckets (3-bucket model) ───────────────────────────
+// ── High-level status buckets (4-bucket model) ───────────────────────
 // Order matters — this is the single source of truth for the order in which
 // pill-tabs, pipeline tiles and stat cards are rendered. User preference:
-// Active → On-going → Idle (most-energetic first, decaying rightward).
-export const STATUS_BUCKETS = ["ACTIVE", "ON_GOING", "IDLE"] as const;
+// Active → On-work → On-going → Idle.  "On-work" sits between Active and
+// On-going to highlight the clients in *deep, intense* engagement right now.
+export const STATUS_BUCKETS = ["ACTIVE", "ON_WORK", "ON_GOING", "IDLE"] as const;
 export type StatusBucket = (typeof STATUS_BUCKETS)[number];
 
 export const STATUS_BUCKET_LABEL: Record<StatusBucket, string> = {
   ACTIVE: "Active",
+  ON_WORK: "On-work",
   IDLE: "Idle",
   ON_GOING: "On-going",
 };
 
 export const STATUS_BUCKET_TONE: Record<
   StatusBucket,
-  "success" | "info" | "neutral" | "warning" | "danger"
+  "success" | "info" | "neutral" | "warning" | "danger" | "purple"
 > = {
   ACTIVE: "success",
+  ON_WORK: "purple",
   IDLE: "warning",
   ON_GOING: "info",
 };
@@ -105,6 +112,10 @@ export function toStatusBucket(
   switch (key) {
     case "ACTIVE":
       return "ACTIVE";
+    case "ON_WORK":
+    case "ONWORK":
+    case "ON-WORK":
+      return "ON_WORK";
     case "INACTIVE":
     case "ON_HOLD":
     case "IDLE":
@@ -121,6 +132,7 @@ export function toStatusBucket(
 // query the DB for "everything in the Active bucket".
 export const BUCKET_TO_STATUSES: Record<StatusBucket, ClientStatus[]> = {
   ACTIVE: ["ACTIVE"],
+  ON_WORK: ["ON_WORK"],
   IDLE: ["INACTIVE", "ON_HOLD"],
   ON_GOING: [
     "POTENTIAL",
@@ -132,12 +144,13 @@ export const BUCKET_TO_STATUSES: Record<StatusBucket, ClientStatus[]> = {
     "SHADOWING",
   ],
 };
-
 // Coarse heuristic to infer a status from free-text markers while importing.
 export function inferStatus(raw: string): ClientStatus {
   const s = raw.toLowerCase();
   if (/\b(idle|inactive|on hold|hold|paused|stuck|low priority)\b/.test(s))
     return "INACTIVE";
+  if (/\b(on[- ]?work|deep engagement|priority client|hot)\b/.test(s))
+    return "ON_WORK";
   if (/\b(terminated|cancelled|canceled|lost)\b/.test(s)) return "TERMINATED";
   if (/\b(finished|completed|done|live|launched)\b/.test(s)) return "FINISHED";
   if (/\b(shadow|shadowing)\b/.test(s)) return "SHADOWING";
