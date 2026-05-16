@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
 import {
-  statusOptions,
+  bucketOptions,
+  defaultBucket,
   priorityOptions,
 } from "@/lib/status";
 import { stageOptions } from "@/lib/stage";
@@ -45,7 +46,7 @@ export function ClientForm({
   const [values, setValues] = useState<ClientFormValues>(
     initial ?? {
       name: "",
-      status: "ACTIVE",
+      status: defaultBucket(),
       priority: "MEDIUM",
       stage: "",
       stageKey: "ENGAGEMENT",
@@ -109,11 +110,12 @@ export function ClientForm({
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Select
-          label="Status"
+          label="Bucket"
           required
-          options={statusOptions()}
+          options={bucketOptions()}
           value={values.status}
           onChange={(e) => set("status", e.target.value)}
+          hint="Primary · Assist · Akamai · Inactive"
         />
         <Select
           label="Priority"

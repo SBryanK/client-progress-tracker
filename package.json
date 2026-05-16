@@ -19,6 +19,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reassign-owner": "tsx scripts/reassign-owner.ts",
     "db:fix-categories": "tsx scripts/data-fix-categories.ts",
+    "db:migrate-buckets": "tsx scripts/migrate-buckets-to-roster.ts",
+    "build:tracker-xlsx": "node scripts/build-tracker-xlsx.mjs",
     "import:docx": "tsx scripts/import-docx.ts",
     "postinstall": "prisma generate"
   },

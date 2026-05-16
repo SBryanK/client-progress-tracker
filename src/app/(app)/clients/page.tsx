@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -30,10 +31,9 @@ export const dynamic = "force-dynamic";
 type SearchParams = {
   bucket?: string;
   /**
-   * Topical group filter (orthogonal to the status bucket). Currently
-   * the only supported value is `akamai`, which lists every client
-   * tagged `akamai` in the comma-separated `tags` column — the cohort
-   * of clients tied to the Akamai-to-EdgeOne migration programme.
+   * Legacy topical-group filter. Kept for URL backwards-compat — the
+   * `Akamai` cohort is now a first-class bucket so we transparently
+   * redirect `?group=akamai` to `?bucket=AKAMAI`.
    */
   group?: string;
 };
@@ -48,29 +48,27 @@ export default async function AllClientsPage({
   const ownerIds = await getOwnerIds();
 
   const sp = await searchParams;
-  // Optional topical group filter (currently only `akamai`). When set
-  // it overrides the bucket filter — the user is asking to see the
-  // whole Akamai migration cohort regardless of bucket.
-  const groupFilter =
-    sp.group?.toLowerCase() === "akamai" ? "akamai" : null;
+  // Legacy URL compat — `?group=akamai` is now `?bucket=AKAMAI`.
+  if (sp.group?.toLowerCase() === "akamai") {
+    redirect("/clients?bucket=AKAMAI");
+  }
 
-  // Bucket-filter resolution — the user redesign defaults the page to
-  // ON_WORK (the deep-engagement bucket) instead of "All", since that's
-  // where active deep work happens. Explicit `?bucket=ALL` opts back
-  // into the unfiltered view; `aliasBucket()` translates legacy values
-  // (`?bucket=ACTIVE`, `?bucket=ON_GOING`) into the new vocabulary so
-  // existing bookmarks keep resolving without a redirect chain.
-  // When the group filter is active, the bucket filter is ignored.
+  // Bucket-filter resolution — the May 2026 redesign defaults the page
+  // to PRIMARY (the top-tier clients bucket) instead of "All", because
+  // that's the surface the owner cares about most on every visit.
+  // Explicit `?bucket=ALL` opts back into the unfiltered view;
+  // `aliasBucket()` translates legacy values (`?bucket=ON_WORK`,
+  // `?bucket=PARTICIPATING`, `?bucket=IDLE`, `?bucket=ACTIVE`,
+  // `?bucket=ON_GOING`) into the new vocabulary so existing bookmarks
+  // keep resolving without a redirect chain.
   const rawBucket = sp.bucket?.toUpperCase();
   let bucketFilter: StatusBucket | undefined;
-  if (groupFilter) {
-    bucketFilter = undefined;
-  } else if (rawBucket === "ALL") {
+  if (rawBucket === "ALL") {
     bucketFilter = undefined;
   } else if (rawBucket) {
-    bucketFilter = aliasBucket(rawBucket) ?? "ON_WORK";
+    bucketFilter = aliasBucket(rawBucket) ?? "PRIMARY";
   } else {
-    bucketFilter = "ON_WORK";
+    bucketFilter = "PRIMARY";
   }
 
   const baseWhere: Prisma.ClientWhereInput = {
@@ -83,14 +81,6 @@ export default async function AllClientsPage({
     ...(bucketFilter
       ? { status: { in: BUCKET_TO_STATUSES[bucketFilter] } }
       : {}),
-    // Tag-driven group filter — `tags` is a comma-separated free-text
-    // column. We match the substring `akamai` because that's how the
-    // data-fix script writes the tag (always lowercase). SQLite's `LIKE`
-    // operator is case-insensitive for ASCII by default, and the seed /
-    // data-fix scripts always normalise the tag to lowercase, so we
-    // don't need Prisma's `mode: "insensitive"` flag (which the SQLite
-    // provider doesn't expose anyway).
-    ...(groupFilter === "akamai" ? { tags: { contains: "akamai" } } : {}),
   };
 
   // We fetch every client's latest weekly update AND latest activity —
@@ -120,9 +110,7 @@ export default async function AllClientsPage({
   });
 
   // For the bucket count pills — query once across the entire (unfiltered)
-  // set so the filter chips can show "On-work · 9", "Participating · 3"
-  // etc. We also pull `tags` so we can derive the Akamai cohort count
-  // for the Akamai chip.
+  // set so the filter chips can show "Primary · 7", "Assist · 7" etc.
   const allForCounts = await prisma.client.findMany({
     where: baseWhere,
     select: { status: true, tags: true },
@@ -130,10 +118,8 @@ export default async function AllClientsPage({
   const bucketCounts = Object.fromEntries(
     STATUS_BUCKETS.map((b) => [b, 0]),
   ) as Record<StatusBucket, number>;
-  let akamaiCount = 0;
   for (const c of allForCounts) {
     bucketCounts[toStatusBucket(c.status)] += 1;
-    if (c.tags?.toLowerCase().includes("akamai")) akamaiCount += 1;
   }
   const totalCount = allForCounts.length;
 
@@ -192,31 +178,17 @@ export default async function AllClientsPage({
                 <T id="clients.clear" fallback="clear" />
               </Link>
             </p>
-          ) : groupFilter === "akamai" ? (
-            <p className="mt-1.5 text-sm text-fg-muted font-description">
-              <T id="clients.showing" fallback="Showing" />{" "}
-              <span className="font-medium text-fg">
-                <T id="clients.group.akamai" fallback="Akamai migration" />
-              </span>
-              {" · "}
-              <Link href="/clients" className="text-accent hover:underline">
-                <T id="clients.clear" fallback="clear" />
-              </Link>
-            </p>
           ) : null}
         </div>
         {isOwner ? <NewClientButton /> : null}
       </header>
 
-      {/* ═══ Modern segmented filter bar w/ bucket counts ═══════════════ */}
+      {/* ═══ Modern segmented filter bar w/ bucket counts ═══════ */}
       <ClientsFilterBar
         active={bucketFilter ?? null}
-        group={groupFilter}
         totalCount={totalCount}
         bucketCounts={bucketCounts}
-        akamaiCount={akamaiCount}
       />
-
       {/* ═══ List ═══════════════════════════════════════════════════════ */}
       {rows.length === 0 ? (
         <Card>
@@ -248,32 +220,38 @@ export default async function AllClientsPage({
           {rows.map(({ c, last }) => {
             const bucket = toStatusBucket(c.status);
             // Full-box tint per bucket — bold saturation (clearly visible).
-            // Per the May 2026 redesign: PARTICIPATING uses the emerald
-            // (green) accent (it's the "everything healthy" bucket),
-            // ON_WORK keeps the purple deep-engagement cue, IDLE stays
-            // amber.
+            // May 2026 4-bucket palette:
+            //   PRIMARY  → emerald  (top clients · the healthy default)
+            //   ASSIST   → sky/blue (support · partner work)
+            //   AKAMAI   → purple   (Akamai → EdgeOne migration cohort)
+            //   INACTIVE → amber    (paused / dormant)
             const bucketCard = {
-              ON_WORK:
-                "border-purple-400 bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-500/40 dark:to-purple-600/25 dark:border-purple-400/50",
-              PARTICIPATING:
+              PRIMARY:
                 "border-emerald-400 bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-500/40 dark:to-emerald-600/25 dark:border-emerald-400/50",
-              IDLE:
+              ASSIST:
+                "border-sky-400 bg-gradient-to-br from-sky-200 to-sky-300 dark:from-sky-500/40 dark:to-sky-600/25 dark:border-sky-400/50",
+              AKAMAI:
+                "border-purple-400 bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-500/40 dark:to-purple-600/25 dark:border-purple-400/50",
+              INACTIVE:
                 "border-amber-400 bg-gradient-to-br from-amber-200 to-amber-300 dark:from-amber-500/40 dark:to-amber-600/25 dark:border-amber-400/50",
             }[bucket];
             const bucketName = {
-              ON_WORK: "text-purple-950 dark:text-purple-50",
-              PARTICIPATING: "text-emerald-950 dark:text-emerald-50",
-              IDLE: "text-amber-950 dark:text-amber-50",
+              PRIMARY: "text-emerald-950 dark:text-emerald-50",
+              ASSIST: "text-sky-950 dark:text-sky-50",
+              AKAMAI: "text-purple-950 dark:text-purple-50",
+              INACTIVE: "text-amber-950 dark:text-amber-50",
             }[bucket];
             const bucketSummary = {
-              ON_WORK: "text-purple-900/85 dark:text-purple-100/85",
-              PARTICIPATING: "text-emerald-900/85 dark:text-emerald-100/85",
-              IDLE: "text-amber-900/85 dark:text-amber-100/85",
+              PRIMARY: "text-emerald-900/85 dark:text-emerald-100/85",
+              ASSIST: "text-sky-900/85 dark:text-sky-100/85",
+              AKAMAI: "text-purple-900/85 dark:text-purple-100/85",
+              INACTIVE: "text-amber-900/85 dark:text-amber-100/85",
             }[bucket];
             const bucketDivider = {
-              ON_WORK: "border-purple-400/70 dark:border-purple-400/30",
-              PARTICIPATING: "border-emerald-400/70 dark:border-emerald-400/30",
-              IDLE: "border-amber-400/70 dark:border-amber-400/30",
+              PRIMARY: "border-emerald-400/70 dark:border-emerald-400/30",
+              ASSIST: "border-sky-400/70 dark:border-sky-400/30",
+              AKAMAI: "border-purple-400/70 dark:border-purple-400/30",
+              INACTIVE: "border-amber-400/70 dark:border-amber-400/30",
             }[bucket];
             return (
             <li key={c.id} className="animate-fade-up">

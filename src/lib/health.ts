@@ -59,8 +59,15 @@ export function computeHealth(input: HealthInput): HealthResult {
     note: recencyNote,
   });
 
-  // 2) Status — 25 points.
+  // 2) Status — 25 points. Maps every legacy and current status value
+  // to a points contribution; the four canonical buckets sit at the top.
   const statusTable: Record<ClientStatus, number> = {
+    // ── Canonical 4-bucket vocabulary (May 2026 redesign) ──
+    PRIMARY: 25,
+    ASSIST: 22,
+    AKAMAI: 20,
+    INACTIVE: 3,
+    // ── Legacy fine-grained values, kept for back-compat ──
     ACTIVE: 25,
     ON_WORK: 25,
     DEAL: 24,
@@ -70,7 +77,6 @@ export function computeHealth(input: HealthInput): HealthResult {
     SHADOWING: 14,
     PENDING: 10,
     ON_HOLD: 6,
-    INACTIVE: 3,
     TERMINATED: 0,
   };
   const statusScore = statusTable[input.status];

@@ -89,18 +89,24 @@ export const DICT: Dict = {
   "clients.no_update": { en: "No weekly update yet", zh: "暂无周报" },
   "clients.open": { en: "Open →", zh: "查看 →" },
 
-  // ── Status bucket labels (3-bucket model, May 2026 redesign) ────────
-  // ON_WORK keeps the deep-engagement cue, PARTICIPATING is the new
-  // "everything healthy" bucket (renamed from Active + absorbed On-going),
-  // IDLE stays paused / on hold.
-  "bucket.ON_WORK": { en: "On-work", zh: "深度跟进" },
-  "bucket.PARTICIPATING": { en: "Participating", zh: "参与中" },
-  "bucket.IDLE": { en: "Idle", zh: "闲置" },
-  // Legacy aliases — retained so old pages that still reference
-  // `bucket.ACTIVE` / `bucket.ON_GOING` (e.g. via `t(`bucket.${b}`)`)
-  // resolve to the same Participating label rather than the raw key.
-  "bucket.ACTIVE": { en: "Participating", zh: "参与中" },
-  "bucket.ON_GOING": { en: "Participating", zh: "参与中" },
+  // ── Bucket labels (4-bucket roster model, May 2026 redesign) ──────
+  // PRIMARY  → top, deep-engagement clients (the default landing tab)
+  // ASSIST   → clients you support / partner on
+  // AKAMAI   → the Akamai → EdgeOne migration cohort
+  // INACTIVE → paused / dormant
+  "bucket.PRIMARY": { en: "Primary", zh: "重点客户" },
+  "bucket.ASSIST": { en: "Assist", zh: "协助跟进" },
+  "bucket.AKAMAI": { en: "Akamai", zh: "Akamai 迁移" },
+  "bucket.INACTIVE": { en: "Inactive", zh: "已暂停" },
+  // Legacy 3-bucket aliases — retained so old pages / saved links
+  // (`bucket.ON_WORK`, `bucket.PARTICIPATING`, `bucket.IDLE`,
+  // `bucket.ACTIVE`, `bucket.ON_GOING`) still render a sensible label
+  // instead of the raw key while the migration finishes propagating.
+  "bucket.ON_WORK": { en: "Primary", zh: "重点客户" },
+  "bucket.PARTICIPATING": { en: "Assist", zh: "协助跟进" },
+  "bucket.IDLE": { en: "Inactive", zh: "已暂停" },
+  "bucket.ACTIVE": { en: "Assist", zh: "协助跟进" },
+  "bucket.ON_GOING": { en: "Assist", zh: "协助跟进" },
 
   // ── Engagement stage labels (7-stage taxonomy) ──────────────────────
   "stage.ENGAGEMENT": { en: "Engagement", zh: "初步接洽" },
@@ -111,8 +117,16 @@ export const DICT: Dict = {
   "stage.AFTERSALES_PROGRESS": { en: "Aftersales Progress", zh: "售后跟进" },
   "stage.DISCONTINUED": { en: "Discontinued", zh: "已终止" },
 
-  // ── Topical group filter ─────────────────────────────────
+  // ── Topical group filter (kept for backwards-compat URL params;
+  //    the Akamai cohort is now a first-class bucket) ────────────────
   "clients.group.akamai": { en: "Akamai", zh: "Akamai 迁移" },
+
+  // ── Form labels ────────────────────────────────────────
+  "form.bucket": { en: "Bucket", zh: "分类" },
+  "form.bucket.hint": {
+    en: "Primary = your top clients · Assist = support · Akamai = migration cohort · Inactive = paused",
+    zh: "重点客户 = 主要负责 · 协助跟进 = 支持参与 · Akamai = 迁移项目 · 已暂停 = 暂时搁置",
+  },
 
   // ── Client metadata labels ──────────────────────────────
   "client.revenue_est": { en: "Revenue est.", zh: "预计收入" },
@@ -121,16 +135,34 @@ export const DICT: Dict = {
   "client.open_in_crm": { en: "Open in CRM", zh: "在 CRM 中打开" },
   "client.akamai_badge": { en: "Akamai migration", zh: "Akamai 迁移" },
 
-  // ── Stat-card sub-labels referenced from the home page ──────────────
-  "stat.onwork": { en: "On-work", zh: "深度跟进" },
-  "stat.onwork.sub": {
-    en: "Deep engagement · priority",
-    zh: "重点客户 · 全力推进",
+  // ── Stat-card sub-labels referenced from the home page (4-bucket) ───
+  "stat.primary": { en: "Primary", zh: "重点客户" },
+  "stat.primary.sub": {
+    en: "Top clients · deep engagement",
+    zh: "主要负责 · 全力推进",
   },
-  "stat.participating": { en: "Participating", zh: "参与中" },
+  "stat.assist": { en: "Assist", zh: "协助跟进" },
+  "stat.assist.sub": {
+    en: "Support · partner work",
+    zh: "支持参与 · 合作推进",
+  },
+  "stat.akamai": { en: "Akamai", zh: "Akamai 迁移" },
+  "stat.akamai.sub": {
+    en: "Akamai → EdgeOne migration cohort",
+    zh: "Akamai → EdgeOne 迁移客户",
+  },
+  "stat.inactive": { en: "Inactive", zh: "已暂停" },
+  "stat.inactive.sub": { en: "Paused / dormant", zh: "暂停 / 休眠" },
+  // Legacy keys preserved so older saved pages keep rendering.
+  "stat.onwork": { en: "Primary", zh: "重点客户" },
+  "stat.onwork.sub": {
+    en: "Top clients · deep engagement",
+    zh: "主要负责 · 全力推进",
+  },
+  "stat.participating": { en: "Assist", zh: "协助跟进" },
   "stat.participating.sub": {
-    en: "Currently moving · in-flight",
-    zh: "有进展 · 进行中",
+    en: "Support · partner work",
+    zh: "支持参与 · 合作推进",
   },
 
   // ── First-visit identity gate ─────────────────────────────

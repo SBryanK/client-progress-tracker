@@ -78,7 +78,7 @@ export default async function LandingPage() {
               </Link>
             ) : null}
             <Link
-              href="/clients?bucket=ON_WORK"
+              href="/clients?bucket=PRIMARY"
               className={`press inline-flex h-12 items-center gap-2 rounded-xl px-6 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${
                 isOwner
                   ? "bg-bg border border-border hover:bg-bg-muted hover:border-border-strong"
@@ -104,44 +104,51 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ Stats row ═══════════════════════════════════════════════════════ */}
+      {/* ═══ Stats row ═════════════════════════════════════════════════════════════════════ */}
       <section
         aria-label="Pipeline snapshot"
-        className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 stagger animate-fade-up"
+        className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-5 stagger animate-fade-up"
       >
         <StatCard
           labelKey="stat.total"
           label="Total clients"
           value={clients.length}
           sublabelKey="stat.total.sub"
-          sublabel="Tracked across all statuses"
+          sublabel="Tracked across all buckets"
         />
         <StatCard
-          labelKey="stat.onwork"
-          label="On-work"
-          value={bucketCounts.ON_WORK}
-          tone="purple"
-          sublabelKey="stat.onwork.sub"
-          sublabel="Deep engagement · priority"
-        />
-        <StatCard
-          labelKey="stat.participating"
-          label="Participating"
-          value={bucketCounts.PARTICIPATING}
+          labelKey="stat.primary"
+          label="Primary"
+          value={bucketCounts.PRIMARY}
           tone="success"
-          sublabelKey="stat.participating.sub"
-          sublabel="Currently moving · in-flight"
+          sublabelKey="stat.primary.sub"
+          sublabel="Top clients · deep engagement"
         />
         <StatCard
-          labelKey="stat.idle"
-          label="Idle"
-          value={bucketCounts.IDLE}
-          tone="warning"
-          sublabelKey="stat.idle.sub"
-          sublabel="Paused / low priority"
+          labelKey="stat.assist"
+          label="Assist"
+          value={bucketCounts.ASSIST}
+          tone="info"
+          sublabelKey="stat.assist.sub"
+          sublabel="Support · partner work"
         />
-      </section>
-      {/* ═══ Recent updates ═════════════════════════════ */}
+        <StatCard
+          labelKey="stat.akamai"
+          label="Akamai"
+          value={bucketCounts.AKAMAI}
+          tone="purple"
+          sublabelKey="stat.akamai.sub"
+          sublabel="Akamai → EdgeOne migration"
+        />
+        <StatCard
+          labelKey="stat.inactive"
+          label="Inactive"
+          value={bucketCounts.INACTIVE}
+          tone="warning"
+          sublabelKey="stat.inactive.sub"
+          sublabel="Paused / dormant"
+        />
+      </section>      {/* ═══ Recent updates ═════════════════════════════ */}
       <section aria-label="Recent updates" className="animate-fade-up">
         <div className="flex items-end justify-between gap-4 mb-5 flex-wrap">
           <div className="min-w-0">

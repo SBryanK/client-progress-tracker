@@ -89,39 +89,44 @@ export default async function DashboardPage() {
         </Link>
       </header>
 
-      {/* ═══ Stats ════════════════════════════════════════════════════════════ */}
+      {/* ═══ Stats ══════════════════════════════════════════════════════════════════════ */}
       <section
         aria-label="Stats"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 stagger"
       >
         <StatCard label="Total clients" value={clients.length} />
         <StatCard
-          label="On-work"
-          value={bucketCounts.ON_WORK}
-          tone="purple"
-        />
-        <StatCard
-          label="Participating"
-          value={bucketCounts.PARTICIPATING}
+          label="Primary"
+          value={bucketCounts.PRIMARY}
           tone="success"
         />
         <StatCard
-          label="Idle"
-          value={bucketCounts.IDLE}
+          label="Assist"
+          value={bucketCounts.ASSIST}
+          tone="info"
+        />
+        <StatCard
+          label="Akamai"
+          value={bucketCounts.AKAMAI}
+          tone="purple"
+        />
+        <StatCard
+          label="Inactive"
+          value={bucketCounts.INACTIVE}
           tone="warning"
         />
       </section>
-      {/* ═══ Buckets ════════════════════════════════════════════════════════════════ */}
+      {/* ═══ Buckets ════════════════════════════════════════════════════════════════════════════ */}
       <section aria-label="Status distribution" className="animate-fade-up">
         <div className="flex items-baseline justify-between gap-4 mb-5">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight font-display">Pipeline</h2>
             <p className="mt-0.5 text-sm text-fg-muted font-description">
-              Three buckets, click to drill in.
+              Four buckets, click to drill in.
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">          {STATUS_BUCKETS.map((b) => {
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">          {STATUS_BUCKETS.map((b) => {
             const count = bucketCounts[b];
             const pct =
               clients.length > 0
