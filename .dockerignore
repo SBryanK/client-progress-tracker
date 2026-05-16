@@ -9,8 +9,13 @@ yarn-error.log
 pnpm-debug.log
 
 # Local SQLite DB / state (we use a named docker volume at runtime instead)
+# Match every level of nesting so a stray nested copy never leaks into the image.
 prisma/dev.db
 prisma/dev.db-journal
+prisma/**/dev.db
+prisma/**/dev.db-journal
+**/*.db
+**/*.db-journal
 
 # Git / editor
 .git

@@ -60,9 +60,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Build-time DB is a throwaway file; the real DB lives on a volume at runtime.
 ENV DATABASE_URL="file:/tmp/build.db"
 
-# package.json's build script runs: prisma generate + prisma db push + next build.
-# We point DATABASE_URL at /tmp so the throwaway DB never ends up in the image.
-RUN npm run build \
+# build:image runs: prisma generate + prisma db push (against the throwaway
+# DB) + next build. The plain `build` script is intentionally non-destructive
+# so local rebuilds never touch developer data.
+RUN npm run build:image \
     && rm -f /tmp/build.db /tmp/build.db-journal
 
 
