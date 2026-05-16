@@ -187,41 +187,78 @@ export function IdentityGate() {
     >
       <div
         ref={dialogRef}
-        className="w-full max-w-md rounded-3xl border border-border bg-bg p-7 shadow-2xl"
+        className="w-full max-w-2xl rounded-3xl border border-border bg-bg p-7 sm:p-9 shadow-2xl"
       >
-        <p className="text-xs font-medium uppercase tracking-wider text-fg-subtle">
-          {t("gate.eyebrow")}
-        </p>
-        <h2
-          id="identity-gate-title"
-          className="mt-2 text-2xl font-bold tracking-tight text-fg"
-        >
-          {t("gate.title")}
-        </h2>
-        <p
-          id="identity-gate-desc"
-          className="mt-2 text-sm text-fg-muted leading-relaxed"
-        >
-          {t("gate.subtitle")}
-        </p>
-        <div className="mt-6 grid gap-3">
+        <div className="text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-fg-subtle">
+            {t("gate.eyebrow")}
+          </p>
+          <h2
+            id="identity-gate-title"
+            className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-fg font-display"
+          >
+            {t("gate.title")}
+          </h2>
+          <p
+            id="identity-gate-desc"
+            className="mt-2 text-sm text-fg-muted leading-relaxed font-description max-w-md mx-auto"
+          >
+            {t("gate.subtitle")}
+          </p>
+        </div>
+
+        <div className="mt-7 grid gap-4 sm:grid-cols-2">
+          {/* Bryan / owner card */}
+          <button
+            type="button"
+            onClick={chooseOwner}
+            className="press group relative rounded-2xl border-2 border-accent/30 bg-gradient-to-br from-accent-soft/60 to-bg p-5 text-left hover:border-accent hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            <div className="flex items-center gap-3">
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-accent text-lg font-bold text-accent-fg shadow-sm">
+                B
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-semibold text-fg font-display">
+                  {t("gate.owner_card_title")}
+                </p>
+                <p className="mt-0.5 text-xs text-fg-muted font-description">
+                  {t("gate.owner_card_body")}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm font-semibold text-accent group-hover:translate-x-0.5 transition-transform">
+              {t("gate.owner_cta")}
+            </p>
+          </button>
+
+          {/* Visitor card */}
           <button
             ref={visitorBtnRef}
             type="button"
             onClick={chooseVisitor}
-            className="press inline-flex h-12 items-center justify-center rounded-xl border border-border bg-bg px-5 text-sm font-medium text-fg hover:bg-bg-muted hover:border-border-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            className="press group relative rounded-2xl border-2 border-border bg-bg p-5 text-left hover:border-border-strong hover:bg-bg-muted/40 hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
-            {t("gate.visitor_cta")}
-          </button>
-          <button
-            type="button"
-            onClick={chooseOwner}
-            className="press inline-flex h-12 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-fg shadow-md hover:bg-accent-hover hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-          >
-            {t("gate.owner_cta")}
+            <div className="flex items-center gap-3">
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-bg-muted text-lg" aria-hidden>
+                👤
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-semibold text-fg font-display">
+                  {t("gate.visitor_card_title")}
+                </p>
+                <p className="mt-0.5 text-xs text-fg-muted font-description">
+                  {t("gate.visitor_card_body")}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm font-semibold text-fg-muted group-hover:text-fg group-hover:translate-x-0.5 transition-all">
+              {t("gate.visitor_cta")}
+            </p>
           </button>
         </div>
-        <p className="mt-4 text-xs text-fg-subtle text-center">
+
+        <p className="mt-6 text-xs text-fg-subtle text-center font-description">
           {t("gate.helper")}
         </p>
       </div>

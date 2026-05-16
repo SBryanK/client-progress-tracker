@@ -32,12 +32,12 @@ export function SignInDialog() {
   const next = params.get("next") ?? "/dashboard";
 
   const [open, setOpen] = useState(autoOpen);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const emailRef = useRef<HTMLInputElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
 
   // Re-sync with URL param (middleware redirects land here with ?signin=1).
   useEffect(() => {
@@ -47,7 +47,7 @@ export function SignInDialog() {
   // Focus management + ESC
   useEffect(() => {
     if (!open) return;
-    emailRef.current?.focus();
+    usernameRef.current?.focus();
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") close();
     }
@@ -75,7 +75,7 @@ export function SignInDialog() {
     setError(null);
     try {
       const res = await signIn("credentials", {
-        email,
+        username,
         password,
         redirect: false,
       });
@@ -86,7 +86,7 @@ export function SignInDialog() {
       }
       if (res.error) {
         setError(
-          "That email / password combination isn't right. Double-check both fields and try again.",
+          "That username / password combination isn't right. Double-check both fields and try again.",
         );
         return;
       }
@@ -147,13 +147,13 @@ export function SignInDialog() {
 
             <form onSubmit={onSubmit} className="flex flex-col gap-3" aria-busy={loading}>
               <Input
-                ref={emailRef}
-                label="Email"
-                type="email"
-                autoComplete="email"
+                ref={usernameRef}
+                label="Username"
+                type="text"
+                autoComplete="username"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
               <Input
                 label="Password"
@@ -177,7 +177,7 @@ export function SignInDialog() {
                 {loading ? "Signing in…" : "Sign in"}
               </Button>
               <p className="text-xs text-fg-subtle text-center">
-                Only pre-authorized emails can sign in.
+                Only pre-authorized usernames can sign in.
               </p>
             </form>
           </div>

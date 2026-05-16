@@ -168,18 +168,28 @@ export const DICT: Dict = {
   // ── First-visit identity gate ─────────────────────────────
   "gate.eyebrow": { en: "Welcome", zh: "欢迎" },
   "gate.title": {
-    en: "How would you like to use this tracker?",
-    zh: "请选择你的使用方式",
+    en: "Welcome to Bryan's Daily Progress",
+    zh: "欢迎来到 Bryan 的每周进展",
   },
   "gate.subtitle": {
-    en: "Pick once — the choice is remembered for a year, and you can switch back any time.",
-    zh: "仅需选择一次 — 偏好会保存一年，随时可以在顶部中重置。",
+    en: "How would you like to continue? We'll remember your choice for a year on this browser.",
+    zh: "请选择身份继续。该选择会在本浏览器保留一年，随时可在顶部重置。",
   },
-  "gate.visitor_cta": { en: "I'm visiting", zh: "游客浏览" },
-  "gate.owner_cta": { en: "I own this tracker", zh: "我是所有者" },
+  "gate.owner_card_title": { en: "I'm Bryan", zh: "我是 Bryan" },
+  "gate.owner_card_body": {
+    en: "Consistency surpasses talent — hope you have a good day, Bryan.",
+    zh: "坚持胜过天赋 — Bryan，今天也是好日子。",
+  },
+  "gate.visitor_card_title": { en: "I'm a visitor", zh: "我是访客" },
+  "gate.visitor_card_body": {
+    en: "Browse Bryan's journal, weekly logs and client roster — all read only.",
+    zh: "浏览 Bryan 的客户名册、周报和日志 — 仅查看权限。",
+  },
+  "gate.visitor_cta": { en: "Continue as visitor →", zh: "以访客身份进入 →" },
+  "gate.owner_cta": { en: "Sign in as Bryan →", zh: "以 Bryan 身份登录 →" },
   "gate.helper": {
-    en: "Visitors can read everything; owners can edit and log updates.",
-    zh: "游客可查看全部内容；所有者可记录周报与编辑客户资料。",
+    en: "Visitors can read everything; only Bryan can edit, log updates and import.",
+    zh: "访客可查看全部内容；仅 Bryan 可编辑、记录周报与导入数据。",
   },
   "gate.reset": { en: "Reset identity", zh: "重置身份选择" },
   // ── Footer ────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@ declare module "next-auth" {
 }
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(1),
   password: z.string().min(1),
 });
 
@@ -30,18 +30,18 @@ const credentialsSchema = z.object({
 export const { auth, handlers, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   trustHost: true,
-  pages: { signIn: "/?signin=1" },
+  pages: { signIn: "/welcome" },
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(raw) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const email = parsed.data.email.trim().toLowerCase();
-        const user = await prisma.user.findUnique({ where: { email } });
+        const username = parsed.data.username.trim().toLowerCase();
+        const user = await prisma.user.findUnique({ where: { username } });
         if (!user) return null;
         const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!ok) return null;
@@ -51,6 +51,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         return {
           id: user.id,
           email: user.email,
+          username: user.username,
           name: user.name,
           role: (user.role as "OWNER" | "VIEWER") ?? "VIEWER",
         };
