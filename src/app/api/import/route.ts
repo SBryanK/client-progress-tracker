@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/roles";
 import { getOwnerIds, requirePrimaryOwnerId } from "@/lib/public";
-import { apiError } from "@/lib/api";
+import { apiError, badRequest } from "@/lib/api";
 import { parseDocx } from "@/lib/import-docx";
 import { parseXlsx } from "@/lib/import-xlsx";
 import { formatWeekRange } from "@/lib/week";
@@ -43,20 +43,36 @@ export async function POST(req: Request) {
 
     if (lower.endsWith(".docx")) {
       format = "docx";
-      const parsed = await parseDocx(buffer);
+      // Wrap the parser so a corrupt zip / unexpected XML throws a 400
+      // with a useful message rather than a generic 500.
+      let parsed: Awaited<ReturnType<typeof parseDocx>>;
+      try {
+        parsed = await parseDocx(buffer);
+      } catch (parseErr) {
+        throw badRequest(
+          "The .docx file could not be parsed. It may be corrupt, password-protected, or saved in an unsupported format.",
+          parseErr instanceof Error ? parseErr.message : undefined,
+        );
+      }
       parserNotes = parsed.notes;
 
-      // 1. Upsert clients
+      // 1. Upsert clients — match by *slug* so re-imports of the same
+      // tracker stay idempotent even if the human-facing client name
+      // is lightly retitled ("Acme Corp" → "Acme Corp.").
       const clientIdByName = new Map<string, string>();
       for (const c of parsed.clients) {
+        const candidateSlug = slugify(c.slug || c.name);
         const existing = await prisma.client.findFirst({
-          where: { ownerId: ownerFilter, name: c.name },
+          where: {
+            ownerId: ownerFilter,
+            OR: [{ slug: candidateSlug }, { name: c.name }],
+          },
         });
         if (existing) {
           clientIdByName.set(c.name, existing.id);
           continue;
         }
-        const slug = await ensureUniqueSlug(c.slug);
+        const slug = await ensureUniqueSlug(candidateSlug);
         const created = await prisma.client.create({
           data: {
             ownerId: primaryOwnerId,
@@ -126,17 +142,29 @@ export async function POST(req: Request) {
       }
     } else if (lower.endsWith(".xlsx")) {
       format = "xlsx";
-      const parsed = parseXlsx(buffer);
+      let parsed: ReturnType<typeof parseXlsx>;
+      try {
+        parsed = parseXlsx(buffer);
+      } catch (parseErr) {
+        throw badRequest(
+          "The .xlsx file could not be parsed. It may be corrupt or saved in an unsupported format.",
+          parseErr instanceof Error ? parseErr.message : undefined,
+        );
+      }
       const clientIdByName = new Map<string, string>();
       for (const c of parsed.clients) {
+        const candidateSlug = slugify(c.slug || c.name);
         const existing = await prisma.client.findFirst({
-          where: { ownerId: ownerFilter, name: c.name },
+          where: {
+            ownerId: ownerFilter,
+            OR: [{ slug: candidateSlug }, { name: c.name }],
+          },
         });
         if (existing) {
           clientIdByName.set(c.name, existing.id);
           continue;
         }
-        const slug = await ensureUniqueSlug(c.slug);
+        const slug = await ensureUniqueSlug(candidateSlug);
         const created = await prisma.client.create({
           data: {
             ownerId: primaryOwnerId,
@@ -180,9 +208,17 @@ export async function POST(req: Request) {
         importedUpdates += 1;
       }
     } else {
-      return NextResponse.json(
-        { error: "Unsupported file type. Use .docx or .xlsx." },
-        { status: 400 },
+      throw badRequest("Unsupported file type. Use .docx or .xlsx.");
+    }
+
+    if (
+      importedClients === 0 &&
+      importedUpdates === 0 &&
+      importedActivities === 0 &&
+      parserNotes.length === 0
+    ) {
+      throw badRequest(
+        "No content was detected in the file. The importer looks for date-range headings (e.g. \"April 6 – April 10\") and a 'List of Works' section in .docx, or a tabular layout in .xlsx.",
       );
     }
 

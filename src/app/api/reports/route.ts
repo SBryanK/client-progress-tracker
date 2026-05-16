@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { requireOwner } from "@/lib/roles";
 import { getOwnerIds } from "@/lib/public";
 import { fetchReport, parseScope } from "@/lib/reports/data";
 import { renderDocx } from "@/lib/reports/docx-exporter";
 import { renderMarkdown } from "@/lib/reports/markdown-exporter";
 import { renderXlsx } from "@/lib/reports/xlsx-exporter";
 import { renderPdf } from "@/lib/reports/pdf-exporter";
-import { apiError } from "@/lib/api";
+import { apiError, badRequest } from "@/lib/api";
 
 const MIME: Record<string, string> = {
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -16,14 +16,19 @@ const MIME: Record<string, string> = {
 
 function safeFilename(scopeStr: string, format: string): string {
   const stamp = new Date().toISOString().slice(0, 10);
-  const base = scopeStr.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const base = scopeStr
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
   return `client-progress_${base}_${stamp}.${format}`;
 }
 
 export async function GET(req: Request) {
   try {
-    // Reports are public — no owner gate. The payload is generated from
-    // the public view of the data (same data the read-only pages expose).
+    // Reports are owner-only — they aggregate the entire dataset and are
+    // intended for management reporting. Anonymous visitors who want a
+    // narrower, scoped read-only view should use /share/[token] instead.
+    await requireOwner();
     const ownerIds = await getOwnerIds();
     const url = new URL(req.url);
     const format = (url.searchParams.get("format") ?? "docx") as
@@ -32,7 +37,7 @@ export async function GET(req: Request) {
       | "xlsx"
       | "md";
     if (!MIME[format]) {
-      return NextResponse.json({ error: "Unsupported format" }, { status: 400 });
+      throw badRequest("Unsupported format");
     }
     const scope = parseScope(url.searchParams);
     const data = await fetchReport(ownerIds, scope);

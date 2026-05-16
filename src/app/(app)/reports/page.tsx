@@ -7,9 +7,12 @@ import { CLIENT_STATUSES, STATUS_LABEL } from "@/lib/status";
 export const dynamic = "force-dynamic";
 
 /**
- * Reports page is public — anyone can download a snapshot of the weekly
- * client progress. No sign-in gate is applied here; editing is still
- * reserved to the owner.
+ * Reports page — owner-only.
+ *
+ * Anyone with a signed-in OWNER cookie can generate and download a
+ * snapshot of the weekly client progress. The middleware redirects
+ * unauthenticated visitors to `/?signin=1&next=/reports`, and the API
+ * route also calls `requireOwner()` for defense in depth.
  */
 export default async function ReportsPage() {
   const ownerIds = await getOwnerIds();
@@ -29,7 +32,7 @@ export default async function ReportsPage() {
         <p className="mt-1.5 text-sm text-fg-muted max-w-xl">
           Generate and export client progress reports to Word, PDF, Excel, or
           Markdown. Pick a date range and a format — the rest happens in a
-          click. No sign-in required.
+          click.
         </p>
       </header>
 

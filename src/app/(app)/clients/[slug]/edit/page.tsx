@@ -39,10 +39,18 @@ export default async function EditClientPage({
               status: client.status,
               priority: client.priority,
               stage: client.stage,
+              stageKey: client.stageKey,
               bdOwner: client.bdOwner,
               region: client.region,
               industry: client.industry,
               accountValue: client.accountValue,
+              revenueEstimate: client.revenueEstimate,
+              firstEngagementOn: client.firstEngagementOn
+                ? client.firstEngagementOn.toISOString().slice(0, 10)
+                : "",
+              signedOn: client.signedOn
+                ? client.signedOn.toISOString().slice(0, 10)
+                : "",
               summary: client.summary,
               notes: client.notes,
               tags: client.tags,

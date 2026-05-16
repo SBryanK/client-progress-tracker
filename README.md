@@ -262,22 +262,121 @@ npm i -g vercel
 vercel
 ```
 
-In the Vercel dashboard, set:
-- `DATABASE_URL` — swap to Neon / Turso / Supabase Postgres (SQLite won't work on serverless).
-- `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, `NEXT_PUBLIC_APP_URL=https://your-app.vercel.app`
-- `OWNER_EMAIL`, `OWNER_PASSWORD`, `VIEWER_EMAILS`, `VIEWER_DEFAULT_PASSWORD`
+In the Vercel dashboard, create a Postgres store (Storage → Create → Postgres);
+Vercel will auto-inject `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING`.
+Then add the following env vars manually:
 
-Then update `prisma/schema.prisma` `provider` to `postgresql`, and run `prisma migrate deploy`.
+- `AUTH_SECRET` — generate with `openssl rand -base64 32`
+- `AUTH_TRUST_HOST=true`, `AUTH_URL=https://<your-app>.vercel.app`
+- `NEXT_PUBLIC_APP_URL=https://<your-app>.vercel.app`
+- `OWNER_EMAILS` (comma-separated), `OWNER_PASSWORD`, `OWNER_NAME`
+- `NEXT_PUBLIC_SITE_OWNER_NAME`, `NEXT_PUBLIC_SITE_TAGLINE`
+- `ANTHROPIC_API_KEY` (only if you want the AI summarize panel — owner-only)
+
+The Vercel build script (`vercel-build` in `package.json`) automatically swaps
+`prisma/schema.prisma` for `prisma/schema.postgres.prisma` and runs
+`prisma db push`.
 
 ### Option 2 — Railway / Fly.io
 
-`package.json`'s `build` already runs `prisma migrate deploy`. Expose port `3000`, set the
-same env vars, attach a Postgres add-on, and you're done.
+`package.json`'s `build` runs `prisma generate && prisma db push && next build`.
+Expose port `3000`, set the same env vars as Option 1, attach a Postgres
+add-on, and you're done.
 
 ### Option 3 — Keep SQLite on a VPS (cheapest)
 
-Works out of the box with `node server.js` (`npm run start`) behind Nginx/Caddy. The
-SQLite file lives at `prisma/dev.db`; back it up on a schedule.
+Works out of the box with `npm run start` behind Nginx/Caddy. The SQLite file
+lives at `prisma/dev.db`; back it up on a schedule.
+
+---
+
+## 🩹 Review pass — what changed (May 2026)
+
+A focused review pass tightened the app for production:
+
+- **Weekly timeline rail** — the vertical line + per-week dots now live in a
+  dedicated CSS-grid gutter on the left of the column, so they never overlap
+  the heading or the entry cards at any breakpoint.
+- **API hardening** — every mutating route returns the correct HTTP status
+  (`401`/`403`/`404`/`410` instead of a flat `400`) via a shared `apiError`
+  helper, and `requireOwner()` is now also enforced on `/api/reports` and
+  `/api/ai/summarize`.
+- **Share links** — the public `/share/[token]` page now resolves clients
+  against the configured `OWNER_EMAILS` pool (so links keep working in a
+  multi-owner setup) and renders a friendly "expired / revoked" view
+  instead of a generic 404.
+- **Imports** — `.docx` / `.xlsx` parser failures now bubble up as `400`
+  with a helpful message, and re-imports are idempotent against `slug`
+  *or* `name`.
+- **Middleware** — `/reports`, `/api/reports`, and `/api/ai/*` are now in
+  the private prefix list (matching the role table above).
+- **i18n** — language preference is mirrored to a cookie alongside
+  `localStorage` so SSR can read it; the share-link expired/revoked view
+  is bilingual.
+
+> Note: the per-client transparent **Health Score** library (`src/lib/health.ts`)
+> ships with the codebase but is no longer wired into the UI — the team
+> consolidated on the 3-bucket status model (**On-work / Participating /
+> Idle**) plus the 7-stage engagement taxonomy (Engagement → Prepare POC →
+> POC → Finish POC → Production → Aftersales Progress → Discontinued)
+> which is simpler to reason about. Re-enabling the health score is
+> a one-screen change in `src/app/(app)/clients/[slug]/page.tsx` if you
+> want it back.
+
+---
+
+## May 2026 redesign — what changed
+
+Highlights of the May 2026 changeset (the current shape of the app):
+
+- **3-bucket status model.** `Active` was renamed to **Participating** and
+  absorbed the previous `On-going` bucket. **On-work** is now the default
+  surface — `/clients` opens on the On-work filter; `?bucket=ALL` is the
+  escape hatch for the unfiltered view. Legacy bookmarks
+  (`?bucket=ACTIVE`, `?bucket=ON_GOING`) transparently alias to
+  `PARTICIPATING` so nothing 404s.
+- **Seven-stage engagement taxonomy.** Every client carries a `stageKey`
+  enum (`ENGAGEMENT`, `PREPARE_POC`, `POC`, `FINISH_POC`, `PRODUCTION`,
+  `AFTERSALES_PROGRESS`, `DISCONTINUED`) rendered as a coloured chip next
+  to the bucket badge. Stage describes maturity; bucket describes
+  attention. The two dimensions are orthogonal.
+- **Akamai migration cohort.** A topical sub-section (`/clients?group=akamai`)
+  lists every client tagged `akamai` regardless of bucket. Driven by the
+  existing comma-separated `tags` column — no schema migration. The
+  data-fix script seeds the canonical six (HSBC, Inditex, ATI/AMD,
+  ExxonMobil, DBS, Prada).
+- **New client metadata fields.** `revenueEstimate` (free-text),
+  `firstEngagementOn` (date), `signedOn` (date), surfaced in the
+  client form and on the detail page metadata block. Empty values
+  render as a muted `—` placeholder, never as the epoch.
+- **CRM deep-link.** Every client detail page exposes an
+  `Open in CRM ↗` action that opens `NEXT_PUBLIC_CRM_URL` (default:
+  the canonical Tencent CSIG CRM URL) in a new tab. Visible to
+  visitors and owners alike.
+- **First-visit identity gate.** The very first time a browser opens
+  the app, an accessible overlay asks `I'm visiting` / `I own this
+  tracker`. The choice persists for ~1 year via a `cp.identity` cookie
+  (`Path=/`, `SameSite=Lax`) and a mirrored `localStorage` key. A
+  `Reset identity` icon button lives in the public header next to the
+  language toggle so users can re-trigger the gate without clearing
+  their browser data. ESC closes to the safe-default visitor branch.
+- **Hidden categories.** The legacy `internal` and `client-engagement`
+  tags no longer surface on `/`, `/clients`, or `/dashboard`. Direct
+  slug URLs still resolve (so existing share links don't break).
+
+### Data-fix script (`scripts/data-fix-categories.ts`)
+
+A one-shot, idempotent script tidies the hand-curated categories:
+
+```bash
+npm run db:fix-categories
+```
+
+It tags the six Akamai cohort clients, sets `DAna → Participating`,
+`ComoTV → On-work`, splits any conflated `Exxon Mobil / MSCI` row into
+two independent records, and archives the obsolete `Hisense` entry.
+Missing names log `skipped: not found` and the script exits with status
+0 — fresh-DB runs are safe.
 
 ---
 

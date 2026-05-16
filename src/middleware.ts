@@ -21,11 +21,20 @@ const { auth } = NextAuth(authConfig);
 const PRIVATE_PREFIXES = [
   "/dashboard",
   "/import",
+  "/reports",
   "/clients/new",
 ];
 const PRIVATE_PATTERNS: RegExp[] = [/^\/clients\/[^/]+\/edit(\/|$)/];
 
-const PRIVATE_API_PREFIXES = ["/api/import", "/api/share"];
+// API routes that mutate state OR aggregate the entire dataset. Owner-only,
+// gated at both the middleware (to short-circuit the request) and the
+// route handler (defense in depth via `requireOwner()`).
+const PRIVATE_API_PREFIXES = [
+  "/api/import",
+  "/api/share",
+  "/api/reports",
+  "/api/ai",
+];
 
 function isPrivate(pathname: string): boolean {
   if (PRIVATE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) return true;

@@ -4,7 +4,7 @@ import { subDays, formatDistanceToNow } from "date-fns";
 import { Plus, Clock, Activity, ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOwnerIds } from "@/lib/public";
+import { getOwnerIds, isHiddenCategory } from "@/lib/public";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatusBucketBadge } from "@/components/status-badge";
 import {
@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   const ownerIds = await getOwnerIds();
   const ownerFilter = ownerIds.length ? { in: ownerIds } : { in: ["__none__"] };
 
-  const [clients, latestUpdates] = await Promise.all([
+  const [clientsRaw, latestUpdates] = await Promise.all([
     prisma.client.findMany({
       where: { ownerId: ownerFilter, archived: false },
       include: {
@@ -39,6 +39,9 @@ export default async function DashboardPage() {
       take: 8,
     }),
   ]);
+  // Hide rows whose only categorisation is the legacy `internal` /
+  // `client-engagement` tags so they don't pollute the dashboard.
+  const clients = clientsRaw.filter((c) => !isHiddenCategory(c));
 
   const bucketCounts = Object.fromEntries(
     STATUS_BUCKETS.map((b) => [b, 0]),
@@ -89,23 +92,18 @@ export default async function DashboardPage() {
       {/* ═══ Stats ════════════════════════════════════════════════════════════ */}
       <section
         aria-label="Stats"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 stagger"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger"
       >
         <StatCard label="Total clients" value={clients.length} />
-        <StatCard
-          label="Active"
-          value={bucketCounts.ACTIVE}
-          tone="success"
-        />
         <StatCard
           label="On-work"
           value={bucketCounts.ON_WORK}
           tone="purple"
         />
         <StatCard
-          label="On-going"
-          value={bucketCounts.ON_GOING}
-          tone="info"
+          label="Participating"
+          value={bucketCounts.PARTICIPATING}
+          tone="success"
         />
         <StatCard
           label="Idle"
@@ -119,11 +117,11 @@ export default async function DashboardPage() {
           <div>
             <h2 className="text-2xl font-semibold tracking-tight font-display">Pipeline</h2>
             <p className="mt-0.5 text-sm text-fg-muted font-description">
-              Four buckets, click to drill in.
+              Three buckets, click to drill in.
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">          {STATUS_BUCKETS.map((b) => {
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">          {STATUS_BUCKETS.map((b) => {
             const count = bucketCounts[b];
             const pct =
               clients.length > 0

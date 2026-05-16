@@ -1,14 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOwnerIds } from "@/lib/public";
-import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardTitle, CardDescription, Badge } from "@/components/ui/card";
 import { StatusBucketBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { toStatusBucket } from "@/lib/status";
+import {
+  CLIENT_STAGES,
+  STAGE_LABEL,
+  STAGE_TONE,
+  type ClientStage,
+} from "@/lib/stage";
+import { getCrmUrl } from "@/lib/crm";
 import { formatWeekRange } from "@/lib/week";
 import { WeeklyUpdateForm } from "./weekly-update-form";
 import { ActivityForm } from "./activity-form";
@@ -65,29 +72,108 @@ export default async function ClientDetailPage({
               {client.name}
             </h1>
             <StatusBucketBadge bucket={toStatusBucket(client.status)} />
+            {/* Engagement-stage chip — sits next to the bucket badge so
+                the maturity dimension reads at a glance alongside the
+                attention dimension. */}
+            {(() => {
+              const stageKey = (CLIENT_STAGES as readonly string[]).includes(
+                client.stageKey,
+              )
+                ? (client.stageKey as ClientStage)
+                : "ENGAGEMENT";
+              return (
+                <Badge tone={STAGE_TONE[stageKey]} dot>
+                  {STAGE_LABEL[stageKey]}
+                </Badge>
+              );
+            })()}
+            {/* Akamai migration cohort badge — driven by the existing
+                comma-separated `tags` column so no schema migration is
+                required. */}
+            {client.tags?.toLowerCase().includes("akamai") ? (
+              <Badge tone="info">Akamai migration</Badge>
+            ) : null}
           </div>
           {client.summary ? (
             <p className="mt-3 text-sm sm:text-base text-fg-muted max-w-3xl leading-relaxed font-description">
               {client.summary}
             </p>
           ) : null}
+          {/* Commercial / lifecycle metadata block. Renders as a compact,
+              keyboard-readable definition list so screen readers announce
+              each pair clearly. Empty values render as a muted em-dash so
+              the layout never collapses or shows the epoch. */}
+          <dl className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm font-description max-w-2xl">
+            <div>
+              <dt className="text-xs uppercase tracking-wider text-fg-subtle">
+                Revenue est.
+              </dt>
+              <dd className="mt-0.5 text-fg">
+                {client.revenueEstimate ? (
+                  client.revenueEstimate
+                ) : (
+                  <span className="text-fg-subtle">—</span>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wider text-fg-subtle">
+                First engagement
+              </dt>
+              <dd className="mt-0.5 text-fg">
+                {client.firstEngagementOn ? (
+                  format(client.firstEngagementOn, "yyyy-MM-dd")
+                ) : (
+                  <span className="text-fg-subtle">—</span>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wider text-fg-subtle">
+                Signed on
+              </dt>
+              <dd className="mt-0.5 text-fg">
+                {client.signedOn ? (
+                  format(client.signedOn, "yyyy-MM-dd")
+                ) : (
+                  <span className="text-fg-subtle">—</span>
+                )}
+              </dd>
+            </div>
+          </dl>
         </div>
-        {isOwner ? (
-          <div className="flex items-center gap-2">
-            <Link href={`/weekly/new?client=${encodeURIComponent(client.slug)}`}>
-              <Button size="sm">
-                <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden />
-                Log update
-              </Button>
-            </Link>
-            <Link href={`/clients/${client.slug}/edit`}>
-              <Button variant="outline" size="sm">
-                Edit
-              </Button>
-            </Link>
-            <DeleteClientButton id={client.id} />
-          </div>
-        ) : null}
+        {/* Action cluster — "Open in CRM" is shown to every viewer
+            (including anonymous visitors) since it's a one-click hop to
+            the source-of-truth, not a privileged action. Owner-only
+            actions follow it. */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href={getCrmUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-bg px-3 text-sm font-medium hover:bg-bg-muted hover:border-border-strong transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            aria-label={`Open ${client.name} in Tencent CSIG CRM (new tab)`}
+          >
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            Open in CRM
+          </a>
+          {isOwner ? (
+            <>
+              <Link href={`/weekly/new?client=${encodeURIComponent(client.slug)}`}>
+                <Button size="sm">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden />
+                  Log update
+                </Button>
+              </Link>
+              <Link href={`/clients/${client.slug}/edit`}>
+                <Button variant="outline" size="sm">
+                  Edit
+                </Button>
+              </Link>
+              <DeleteClientButton id={client.id} />
+            </>
+          ) : null}
+        </div>
       </header>
 
       {/* summary already rendered inside header */}

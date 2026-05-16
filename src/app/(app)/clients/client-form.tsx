@@ -8,6 +8,7 @@ import {
   statusOptions,
   priorityOptions,
 } from "@/lib/status";
+import { stageOptions } from "@/lib/stage";
 
 export type ClientFormValues = {
   id?: string;
@@ -15,10 +16,18 @@ export type ClientFormValues = {
   status: string;
   priority: string;
   stage?: string | null;
+  /** Enumerated lifecycle stage — see src/lib/stage.ts. */
+  stageKey?: string;
   bdOwner?: string | null;
   region?: string | null;
   industry?: string | null;
   accountValue?: string | null;
+  /** Free-form revenue estimate, e.g. "~$350K/yr". */
+  revenueEstimate?: string | null;
+  /** YYYY-MM-DD or empty string. */
+  firstEngagementOn?: string | null;
+  /** YYYY-MM-DD or empty string. */
+  signedOn?: string | null;
   summary?: string | null;
   notes?: string | null;
   tags?: string | null;
@@ -39,10 +48,14 @@ export function ClientForm({
       status: "ACTIVE",
       priority: "MEDIUM",
       stage: "",
+      stageKey: "ENGAGEMENT",
       bdOwner: "",
       region: "",
       industry: "",
       accountValue: "",
+      revenueEstimate: "",
+      firstEngagementOn: "",
+      signedOn: "",
       summary: "",
       notes: "",
       tags: "",
@@ -112,15 +125,45 @@ export function ClientForm({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
-          label="Stage"
+          label="Stage (free-text note)"
           value={values.stage ?? ""}
           onChange={(e) => set("stage", e.target.value)}
-          hint="e.g. PoC, Migration, Live"
+          hint="Optional human note, e.g. 'PoC ramp-up week 2'."
         />
+        <Select
+          label="Engagement stage"
+          options={stageOptions()}
+          value={values.stageKey ?? "ENGAGEMENT"}
+          onChange={(e) => set("stageKey", e.target.value)}
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="BD / account owner"
           value={values.bdOwner ?? ""}
           onChange={(e) => set("bdOwner", e.target.value)}
+        />
+        <Input
+          label="Revenue estimate"
+          value={values.revenueEstimate ?? ""}
+          onChange={(e) => set("revenueEstimate", e.target.value)}
+          hint="Free-form, e.g. ~$350K/yr or TBD."
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          label="First engagement"
+          type="date"
+          value={values.firstEngagementOn ?? ""}
+          onChange={(e) => set("firstEngagementOn", e.target.value)}
+          hint="Calendar date of first contact."
+        />
+        <Input
+          label="Signed on"
+          type="date"
+          value={values.signedOn ?? ""}
+          onChange={(e) => set("signedOn", e.target.value)}
+          hint="Date the contract / SoW was signed."
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-3">

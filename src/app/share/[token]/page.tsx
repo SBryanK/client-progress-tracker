@@ -3,8 +3,10 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getOwnerIds } from "@/lib/public";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
+import { T } from "@/components/t";
 import { formatWeekRange } from "@/lib/week";
 import { STATUS_LABEL } from "@/lib/status";
 
@@ -16,16 +18,70 @@ function safeStatusLabel(s: string | null | undefined): string {
 export const dynamic = "force-dynamic";
 
 /**
+ * Friendly "this link is no longer available" surface — used for both the
+ * revoked and the expired states so a stale URL never silently resolves to
+ * a different link, but also doesn't show a generic 404 chrome.
+ */
+function ExpiredOrRevokedView({
+  reason,
+}: {
+  reason: "revoked" | "expired";
+}) {
+  return (
+    <main className="mx-auto max-w-xl px-4 sm:px-6 py-16 flex flex-col gap-4 text-center">
+      <p className="text-xs font-medium uppercase tracking-wider text-fg-subtle">
+        <T id="share.eyebrow" fallback="Shared report" />
+      </p>
+      <h1 className="text-3xl font-bold tracking-tight">
+        {reason === "expired" ? (
+          <T id="share.expired.title" fallback="This share link has expired" />
+        ) : (
+          <T id="share.revoked.title" fallback="This share link has been revoked" />
+        )}
+      </h1>
+      <p className="text-sm text-fg-muted">
+        {reason === "expired" ? (
+          <T
+            id="share.expired.desc"
+            fallback="The owner set an expiry on this read-only report and the date has passed."
+          />
+        ) : (
+          <T
+            id="share.revoked.desc"
+            fallback="The owner has manually revoked access to this read-only report."
+          />
+        )}{" "}
+        <T
+          id="share.expired.cta"
+          fallback="If you still need a copy of the data, please ask the owner to regenerate the link."
+        />
+      </p>
+      <div>
+        <Link
+          href="/"
+          className="inline-flex h-10 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          <T id="share.go_home" fallback="Go to homepage" />
+        </Link>
+      </div>
+    </main>
+  );
+}
+
+/**
  * Public, token-scoped, read-only report.
  *
  * Anyone with the link can read; the token is 48 hex chars of CSPRNG output
  * (unguessable). The link fails closed when:
- *   - revoked === true
- *   - expiresAt has passed
+ *   - revoked === true   → "revoked" message (HTTP 410-equivalent UX)
+ *   - expiresAt has passed → "expired" message (HTTP 410-equivalent UX)
+ *   - token does not exist → 404 (genuinely unknown URL)
  *
  * No auth required — by design. The visible rows are filtered by whatever
  * the owner configured when they created the link (client / date range /
- * status).
+ * status), and additionally scoped to the configured OWNER_EMAILS pool so
+ * the link continues to resolve in a multi-owner setup where the data may
+ * have moved over to the primary owner.
  */
 export default async function SharedReportPage({
   params,
@@ -37,11 +93,19 @@ export default async function SharedReportPage({
     where: { token },
     include: { user: true },
   });
-  if (!link || link.revoked) notFound();
-  if (link.expiresAt && link.expiresAt.getTime() < Date.now()) notFound();
+  if (!link) notFound();
+  if (link.revoked) return <ExpiredOrRevokedView reason="revoked" />;
+  if (link.expiresAt && link.expiresAt.getTime() < Date.now()) {
+    return <ExpiredOrRevokedView reason="expired" />;
+  }
+
+  const ownerIds = await getOwnerIds();
+  const ownerFilter = ownerIds.length
+    ? { in: ownerIds }
+    : { in: ["__none__"] };
 
   const where: Prisma.WeeklyUpdateWhereInput = {
-    client: { ownerId: link.userId, archived: false },
+    client: { ownerId: ownerFilter, archived: false },
   };
   if (link.clientId) {
     where.clientId = link.clientId;
@@ -50,12 +114,13 @@ export default async function SharedReportPage({
     where.weekStart = {};
     if (link.fromDate)
       (where.weekStart as Prisma.DateTimeFilter).gte = link.fromDate;
-    if (link.toDate) (where.weekStart as Prisma.DateTimeFilter).lte = link.toDate;
+    if (link.toDate)
+      (where.weekStart as Prisma.DateTimeFilter).lte = link.toDate;
   }
   if (link.statusFilter) {
     where.OR = [
       { status: link.statusFilter },
-      { client: { is: { status: link.statusFilter, ownerId: link.userId } } },
+      { client: { is: { status: link.statusFilter, ownerId: ownerFilter } } },
     ];
   }
 

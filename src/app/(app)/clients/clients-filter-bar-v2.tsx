@@ -16,21 +16,28 @@ import { STATUS_BUCKETS } from "@/lib/status";
  *  • Each segment shows its count in a muted sibling span so the user can
  *    scan the pipeline at a glance without opening the dashboard.
  *  • Keyboard-navigable via normal tabbing — uses <Link> under the hood so
- *    deep-linking still works ("/clients?bucket=ACTIVE").
+ *    deep-linking still works ("/clients?bucket=PARTICIPATING").
+ *  • The "Akamai" segment is orthogonal to the bucket segments — it's a
+ *    topical cohort (clients tagged `akamai`), shown last so it visually
+ *    reads as a separate dimension.
  */
 export function ClientsFilterBar({
   active,
+  group,
   totalCount,
   bucketCounts,
+  akamaiCount,
 }: {
   active: StatusBucket | null;
+  group: string | null;
   totalCount: number;
   bucketCounts: Record<StatusBucket, number>;
+  akamaiCount: number;
 }) {
   const { t } = useLang();
 
   const segments: Array<{
-    key: "ALL" | StatusBucket;
+    key: "ALL" | StatusBucket | "AKAMAI";
     label: string;
     href: string;
     count: number;
@@ -39,19 +46,28 @@ export function ClientsFilterBar({
     {
       key: "ALL",
       label: t("clients.filter_all"),
-      href: "/clients",
+      // Explicit `?bucket=ALL` because the bare `/clients` path now
+      // defaults to ON_WORK — we need a dedicated value to opt back
+      // into the unfiltered view.
+      href: "/clients?bucket=ALL",
       count: totalCount,
-      isActive: active === null,
+      isActive: active === null && group === null,
     },
     ...STATUS_BUCKETS.map((b) => ({
       key: b,
       label: t(`bucket.${b}`),
       href: `/clients?bucket=${b}`,
       count: bucketCounts[b],
-      isActive: active === b,
+      isActive: active === b && group === null,
     })),
+    {
+      key: "AKAMAI",
+      label: t("clients.group.akamai"),
+      href: "/clients?group=akamai",
+      count: akamaiCount,
+      isActive: group === "akamai",
+    },
   ];
-
   return (
     <nav
       aria-label={t("clients.filter_aria")}

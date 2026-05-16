@@ -123,30 +123,48 @@ export default async function WeeklyPage({
             return (
               <li
                 key={weekKey}
-                className="relative flex gap-4 sm:gap-6 pb-12 last:pb-0 animate-fade-up"
+                // ─ Two-column CSS grid: a fixed-width rail gutter on the
+                //   left, then the content column on the right. Using
+                //   `grid-cols-[…]` (not flex) guarantees the rail width is
+                //   honoured exactly — the dot ring (14 px dot + 4 px ring
+                //   on each side ≈ 22 px) needs at least 28 px of room so
+                //   nothing ever crops or bleeds into the heading.
+                className="relative grid grid-cols-[2rem_minmax(0,1fr)] sm:grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 sm:gap-x-5 pb-12 last:pb-0 animate-fade-up"
                 aria-labelledby={`wk-${weekKey}`}
               >
-                {/* ═ Rail column — fixed-width gutter that owns the dot + line. */}
+                {/* ═ Rail column — the gutter that owns the dot + line. The
+                    column is `self-stretch` by default in grid, so the
+                    connector line can span from the dot all the way to the
+                    next list item without ever overlapping the content
+                    column to its right. */}
                 <div
                   aria-hidden
-                  className="relative flex-none w-6 sm:w-8 self-stretch"
+                  className="relative h-full"
                 >
-                  {/* Vertical connector — lives entirely inside the rail
-                      column and sits below the dot, so it can never enter
-                      the heading text or the entry cards. */}
+                  {/* Vertical connector — sits dead-centre of the rail
+                      column and only renders for non-last items, so the
+                      rail never extends past the final entry. The line
+                      starts just below the dot (top-7) and runs to the
+                      bottom of the row, which is `pb-12` = 3rem of empty
+                      space before the next item, so the connector visually
+                      bridges the gap between two dots. */}
                   {!isLast ? (
                     <span
-                      className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-10 bottom-[-3rem] w-0.5 rounded-full ${
+                      className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-7 bottom-0 w-0.5 rounded-full ${
                         isLatest
                           ? "bg-gradient-to-b from-accent via-accent/60 to-border-strong/60"
                           : "bg-border-strong/60"
                       }`}
                     />
                   ) : null}
-                  {/* Dot — vertically aligned with the centre of the heading
-                      cap-height (≈12 px from the top of the row). */}
+                  {/* Dot — vertically aligned with the cap-height of the
+                      week heading (`text-xl sm:text-2xl` ≈ 28-32 px tall,
+                      so its cap-height centre sits ~14-15 px from the top
+                      of the row). The 4 px ring matches the page
+                      background so the line appears to pass *behind* the
+                      dot rather than through it. */}
                   <span
-                    className={`absolute left-1/2 top-3 -translate-x-1/2 h-3.5 w-3.5 rounded-full ring-4 ring-bg shadow-md ${
+                    className={`absolute left-1/2 top-[14px] sm:top-4 -translate-x-1/2 h-3.5 w-3.5 rounded-full ring-4 ring-bg shadow-md ${
                       isLatest
                         ? "bg-accent animate-pulse-ring"
                         : "bg-border-strong"
@@ -154,8 +172,10 @@ export default async function WeeklyPage({
                   />
                 </div>
 
-                {/* ═ Content column — owns the heading + cards, never overlaps the rail. */}
-                <div className="min-w-0 flex-1">
+                {/* ═ Content column — owns the heading + cards. Lives in
+                    its own grid column, so it can never collide with the
+                    rail no matter how long the heading or how many cards. */}
+                <div className="min-w-0">
                   {/* Week header */}
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     <h2

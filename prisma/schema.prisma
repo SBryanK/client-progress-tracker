@@ -44,6 +44,7 @@ model Client {
   status      String   @default("ACTIVE")     // ACTIVE | INACTIVE | DEAL | POTENTIAL | PENDING | TERMINATED | FINISHED | ON_HOLD | LEARNING | SHADOWING
   priority    String   @default("MEDIUM")     // LOW | MEDIUM | HIGH | CRITICAL
   stage       String?                         // Free-text — e.g. "PoC", "Migration", "Live"
+  stageKey    String   @default("ENGAGEMENT") // Enumerated lifecycle: ENGAGEMENT | PREPARE_POC | POC | FINISH_POC | PRODUCTION | AFTERSALES_PROGRESS | DISCONTINUED
   tags        String?                         // comma-separated
   isNewLead   Boolean  @default(false)
 
@@ -51,6 +52,11 @@ model Client {
   region      String?                         // e.g. "ID", "SG", "MY"
   industry    String?
   accountValue String?                        // free-form: "~$350/month", "~3 PB/year"
+
+  // Commercial / lifecycle metadata (added May 2026)
+  revenueEstimate   String?                   // free-form: "~$350K/yr", "TBD"
+  firstEngagementOn DateTime?                 // calendar date of first contact
+  signedOn          DateTime?                 // calendar date of contract / SoW signing
 
   summary     String?                         // one-line description shown on cards
   notes       String?                         // long-form markdown notes (rich content)

@@ -45,6 +45,9 @@ model Client {
   status      String   @default("ACTIVE")     // ACTIVE | INACTIVE | DEAL | POTENTIAL | PENDING | TERMINATED | FINISHED | ON_HOLD | LEARNING | SHADOWING
   priority    String   @default("MEDIUM")     // LOW | MEDIUM | HIGH | CRITICAL
   stage       String?                         // Free-text — e.g. "PoC", "Migration", "Live"
+  // Engagement-stage enum (May 2026 redesign). Mirrors src/lib/stage.ts:
+  // ENGAGEMENT | PREPARE_POC | POC | FINISH_POC | PRODUCTION | AFTERSALES_PROGRESS | DISCONTINUED
+  stageKey    String   @default("ENGAGEMENT")
   tags        String?                         // comma-separated
   isNewLead   Boolean  @default(false)
 
@@ -52,6 +55,11 @@ model Client {
   region      String?                         // e.g. "ID", "SG", "MY"
   industry    String?
   accountValue String?                        // free-form: "~$350/month", "~3 PB/year"
+  // May-2026 fields. All optional — pre-existing rows render the
+  // friendly placeholder ("—") when these are null.
+  revenueEstimate   String?                   // free-form: "~$120k/yr", "TBD"
+  firstEngagementOn DateTime?                 // first contact / kickoff date
+  signedOn          DateTime?                 // contract / order-form signed date
 
   summary     String?                         // one-line description shown on cards
   notes       String?                         // long-form markdown notes (rich content)

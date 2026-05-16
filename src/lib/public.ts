@@ -77,3 +77,29 @@ export async function requirePrimaryOwnerId(): Promise<string> {
   }
   return id;
 }
+
+// Tags that should NOT appear in the default public/listing views.
+// These are legacy categories the team no longer surfaces (May 2026).
+// Rows carrying these tags are still reachable via direct slug URL, but
+// don't pollute the default `/clients`, `/dashboard`, and home lists.
+const HIDDEN_TAGS = new Set(["internal", "client-engagement"]);
+
+/**
+ * Returns `true` if a client should be hidden from the default views
+ * because its only tag is one of the legacy categories above.
+ *
+ * A client tagged `internal,akamai` (or any combination that includes a
+ * non-hidden tag) is NOT considered hidden — the user explicitly wanted
+ * it to surface under another lens.
+ */
+export function isHiddenCategory(
+  client: { tags: string | null | undefined },
+): boolean {
+  if (!client.tags) return false;
+  const tags = client.tags
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  if (tags.length === 0) return false;
+  return tags.every((t) => HIDDEN_TAGS.has(t));
+}

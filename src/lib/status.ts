@@ -1,13 +1,13 @@
 // Single source of truth for status + priority vocabulary.
 //
 // We keep a fine-grained list of raw statuses for back-compat with existing
-// rows in the DB, but the UI only ever renders three buckets:
+// rows in the DB, but the UI only ever renders three buckets (the user
+// consolidated the vocabulary in May 2026):
 //
-//   • ACTIVE    – currently moving
-//   • IDLE      – paused / low priority / on hold / inactive
-//   • ON_GOING  – long-running, learning, shadowing, pending, terminated,
-//                 signed contract, potential leads, finished — everything
-//                 else goes here (per user's unified bucket choice).
+//   • ON_WORK        – live, deep-engagement clients (the default surface)
+//   • PARTICIPATING  – everything currently moving but not in deep work
+//                       (renamed from ACTIVE; absorbs the old ON_GOING)
+//   • IDLE           – paused / on hold / inactive
 //
 // `toStatusBucket()` is the only function callers should use when deciding
 // which badge / colour to render.
@@ -29,45 +29,48 @@ export const CLIENT_STATUSES = [
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
 export const STATUS_LABEL: Record<ClientStatus, string> = {
-  ACTIVE: "Active",
+  ACTIVE: "Participating",
   ON_WORK: "On-work",
-  POTENTIAL: "On-going",
-  DEAL: "On-going",
-  PENDING: "On-going",
+  POTENTIAL: "Participating",
+  DEAL: "Participating",
+  PENDING: "Participating",
   INACTIVE: "Idle",
   ON_HOLD: "Idle",
-  FINISHED: "On-going",
-  TERMINATED: "On-going",
-  LEARNING: "On-going",
-  SHADOWING: "On-going",
+  FINISHED: "Participating",
+  TERMINATED: "Participating",
+  LEARNING: "Participating",
+  SHADOWING: "Participating",
 };
 
 export const STATUS_TONE: Record<
   ClientStatus,
   "neutral" | "info" | "success" | "warning" | "danger" | "purple"
 > = {
+  // ON_WORK keeps the purple highlight (deep engagement / "intense" cue).
+  // Everything that rolls up into Participating uses the green success
+  // tone — it's the "everything healthy" bucket in the 3-bucket model.
   ACTIVE: "success",
   ON_WORK: "purple",
-  POTENTIAL: "info",
-  DEAL: "info",
-  PENDING: "info",
+  POTENTIAL: "success",
+  DEAL: "success",
+  PENDING: "success",
   INACTIVE: "warning",
   ON_HOLD: "warning",
-  FINISHED: "info",
-  TERMINATED: "info",
-  LEARNING: "info",
-  SHADOWING: "info",
+  FINISHED: "success",
+  TERMINATED: "success",
+  LEARNING: "success",
+  SHADOWING: "success",
 };
 
 export const CLIENT_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 export type ClientPriority = (typeof CLIENT_PRIORITIES)[number];
 
 export function statusOptions() {
-  // Only the four buckets are exposed in forms.
+  // Only the three buckets are exposed in forms — owners pick the
+  // raw status value that maps cleanly to the bucket they want.
   return [
-    { value: "ACTIVE", label: "Active" },
     { value: "ON_WORK", label: "On-work" },
-    { value: "POTENTIAL", label: "On-going" },
+    { value: "ACTIVE", label: "Participating" },
     { value: "INACTIVE", label: "Idle" },
   ];
 }
@@ -79,29 +82,35 @@ export function priorityOptions() {
   }));
 }
 
-// ── High-level status buckets (4-bucket model) ───────────────────────
+// ── High-level status buckets (3-bucket model) ───────────────────────
 // Order matters — this is the single source of truth for the order in which
 // pill-tabs, pipeline tiles and stat cards are rendered. User preference:
-// Active → On-work → On-going → Idle.  "On-work" sits between Active and
-// On-going to highlight the clients in *deep, intense* engagement right now.
-export const STATUS_BUCKETS = ["ACTIVE", "ON_WORK", "ON_GOING", "IDLE"] as const;
+// On-work → Participating → Idle. On-work sits first because that's the
+// default landing surface (the deep-engagement work the owner cares
+// about most right now).
+export const STATUS_BUCKETS = [
+  "ON_WORK",
+  "PARTICIPATING",
+  "IDLE",
+] as const;
 export type StatusBucket = (typeof STATUS_BUCKETS)[number];
 
 export const STATUS_BUCKET_LABEL: Record<StatusBucket, string> = {
-  ACTIVE: "Active",
   ON_WORK: "On-work",
+  PARTICIPATING: "Participating",
   IDLE: "Idle",
-  ON_GOING: "On-going",
 };
 
 export const STATUS_BUCKET_TONE: Record<
   StatusBucket,
   "success" | "info" | "neutral" | "warning" | "danger" | "purple"
 > = {
-  ACTIVE: "success",
+  // Per the May 2026 redesign: On-work keeps the purple highlight
+  // (deep-engagement cue), Participating moves to the green success
+  // tone (the new "everything healthy" bucket), Idle stays warning.
   ON_WORK: "purple",
+  PARTICIPATING: "success",
   IDLE: "warning",
-  ON_GOING: "info",
 };
 
 // Fine-grained → bucket mapping.
@@ -110,8 +119,6 @@ export function toStatusBucket(
 ): StatusBucket {
   const key = (s ?? "ACTIVE").toString().toUpperCase();
   switch (key) {
-    case "ACTIVE":
-      return "ACTIVE";
     case "ON_WORK":
     case "ONWORK":
     case "ON-WORK":
@@ -121,20 +128,50 @@ export function toStatusBucket(
     case "IDLE":
     case "LOW_PRIORITY":
       return "IDLE";
-    // Everything else — POTENTIAL, DEAL, FINISHED, LEARNING, SHADOWING,
-    // PENDING, TERMINATED, DEAL_CLOSED — rolls up to On-going.
+    // Everything else — ACTIVE, POTENTIAL, DEAL, FINISHED, LEARNING,
+    // SHADOWING, PENDING, TERMINATED, DEAL_CLOSED — rolls up to
+    // Participating.
     default:
-      return "ON_GOING";
+      return "PARTICIPATING";
+  }
+}
+
+/**
+ * Translate a legacy `?bucket=…` URL value into the current bucket
+ * vocabulary so old bookmarks (`/clients?bucket=ACTIVE` or
+ * `?bucket=ON_GOING`) keep resolving without a redirect chain.
+ *
+ * Returns `null` for genuinely unknown values so callers can default
+ * to the on-work tile.
+ */
+export function aliasBucket(
+  raw: string | null | undefined,
+): StatusBucket | null {
+  if (!raw) return null;
+  const key = raw.toUpperCase();
+  switch (key) {
+    case "ON_WORK":
+      return "ON_WORK";
+    case "PARTICIPATING":
+    // Legacy aliases — both fold into Participating.
+    case "ACTIVE":
+    case "ON_GOING":
+    case "ONGOING":
+      return "PARTICIPATING";
+    case "IDLE":
+      return "IDLE";
+    default:
+      return null;
   }
 }
 
 // The fine statuses that roll up into each bucket — used when we need to
-// query the DB for "everything in the Active bucket".
+// query the DB for "everything in the Participating bucket".
 export const BUCKET_TO_STATUSES: Record<StatusBucket, ClientStatus[]> = {
-  ACTIVE: ["ACTIVE"],
   ON_WORK: ["ON_WORK"],
   IDLE: ["INACTIVE", "ON_HOLD"],
-  ON_GOING: [
+  PARTICIPATING: [
+    "ACTIVE",
     "POTENTIAL",
     "DEAL",
     "PENDING",

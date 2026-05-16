@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { requireOwner, AuthError } from "@/lib/roles";
+import { requireOwner } from "@/lib/roles";
+import { getOwnerIds } from "@/lib/public";
+import { apiError, notFound, badRequest } from "@/lib/api";
 
 /**
  * /api/share — owner-only CRUD for ShareLink rows.
@@ -48,13 +50,7 @@ export async function GET() {
     });
     return NextResponse.json({ links });
   } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json(
-        { error: err.message },
-        { status: err.code === "UNAUTHENTICATED" ? 401 : 403 },
-      );
-    }
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return apiError(err);
   }
 }
 
@@ -64,23 +60,25 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Validation failed", issues: parsed.error.issues },
-        { status: 400 },
-      );
+      throw badRequest("Validation failed", parsed.error.issues);
     }
     const data = parsed.data;
 
-    // Resolve clientSlug → clientId (scoped to owner's clients only).
+    // Resolve clientSlug → clientId. Multi-owner: a share link can
+    // reference any Client in the configured OWNER_EMAILS pool, not
+    // just the one belonging to the caller's user row, so the link
+    // continues to resolve even if owners change later.
     let clientId: string | null = null;
     if (data.clientSlug) {
+      const ownerIds = await getOwnerIds();
       const c = await prisma.client.findFirst({
-        where: { slug: data.clientSlug, ownerId: session.user.id },
+        where: {
+          slug: data.clientSlug,
+          ownerId: ownerIds.length ? { in: ownerIds } : { in: ["__none__"] },
+        },
         select: { id: true },
       });
-      if (!c) {
-        return NextResponse.json({ error: "Client not found" }, { status: 404 });
-      }
+      if (!c) throw notFound("Client not found");
       clientId = c.id;
     }
 
@@ -101,12 +99,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ link }, { status: 201 });
   } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json(
-        { error: err.message },
-        { status: err.code === "UNAUTHENTICATED" ? 401 : 403 },
-      );
-    }
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return apiError(err);
   }
 }

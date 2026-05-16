@@ -3,8 +3,8 @@ import { Prisma } from "@prisma/client";
 import { Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { getOwnerIds } from "@/lib/public";
-import { Card } from "@/components/ui/card";
+import { getOwnerIds, isHiddenCategory } from "@/lib/public";
+import { Card, Badge } from "@/components/ui/card";
 import { StatusBucketBadge } from "@/components/status-badge";
 import { T } from "@/components/t";
 import { ClientsFilterBar } from "./clients-filter-bar-v2";
@@ -14,14 +14,28 @@ import {
   STATUS_BUCKET_LABEL,
   BUCKET_TO_STATUSES,
   toStatusBucket,
+  aliasBucket,
   type StatusBucket,
 } from "@/lib/status";
+import {
+  CLIENT_STAGES,
+  STAGE_LABEL,
+  STAGE_TONE,
+  type ClientStage,
+} from "@/lib/stage";
 import { NewClientButton } from "./new-client-button";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
   bucket?: string;
+  /**
+   * Topical group filter (orthogonal to the status bucket). Currently
+   * the only supported value is `akamai`, which lists every client
+   * tagged `akamai` in the comma-separated `tags` column — the cohort
+   * of clients tied to the Akamai-to-EdgeOne migration programme.
+   */
+  group?: string;
 };
 
 export default async function AllClientsPage({
@@ -34,10 +48,30 @@ export default async function AllClientsPage({
   const ownerIds = await getOwnerIds();
 
   const sp = await searchParams;
-  const bucketFilter =
-    sp.bucket && (STATUS_BUCKETS as readonly string[]).includes(sp.bucket)
-      ? (sp.bucket as StatusBucket)
-      : undefined;
+  // Optional topical group filter (currently only `akamai`). When set
+  // it overrides the bucket filter — the user is asking to see the
+  // whole Akamai migration cohort regardless of bucket.
+  const groupFilter =
+    sp.group?.toLowerCase() === "akamai" ? "akamai" : null;
+
+  // Bucket-filter resolution — the user redesign defaults the page to
+  // ON_WORK (the deep-engagement bucket) instead of "All", since that's
+  // where active deep work happens. Explicit `?bucket=ALL` opts back
+  // into the unfiltered view; `aliasBucket()` translates legacy values
+  // (`?bucket=ACTIVE`, `?bucket=ON_GOING`) into the new vocabulary so
+  // existing bookmarks keep resolving without a redirect chain.
+  // When the group filter is active, the bucket filter is ignored.
+  const rawBucket = sp.bucket?.toUpperCase();
+  let bucketFilter: StatusBucket | undefined;
+  if (groupFilter) {
+    bucketFilter = undefined;
+  } else if (rawBucket === "ALL") {
+    bucketFilter = undefined;
+  } else if (rawBucket) {
+    bucketFilter = aliasBucket(rawBucket) ?? "ON_WORK";
+  } else {
+    bucketFilter = "ON_WORK";
+  }
 
   const baseWhere: Prisma.ClientWhereInput = {
     ownerId: ownerIds.length ? { in: ownerIds } : { in: ["__none__"] },
@@ -49,6 +83,14 @@ export default async function AllClientsPage({
     ...(bucketFilter
       ? { status: { in: BUCKET_TO_STATUSES[bucketFilter] } }
       : {}),
+    // Tag-driven group filter — `tags` is a comma-separated free-text
+    // column. We match the substring `akamai` because that's how the
+    // data-fix script writes the tag (always lowercase). SQLite's `LIKE`
+    // operator is case-insensitive for ASCII by default, and the seed /
+    // data-fix scripts always normalise the tag to lowercase, so we
+    // don't need Prisma's `mode: "insensitive"` flag (which the SQLite
+    // provider doesn't expose anyway).
+    ...(groupFilter === "akamai" ? { tags: { contains: "akamai" } } : {}),
   };
 
   // We fetch every client's latest weekly update AND latest activity —
@@ -78,15 +120,21 @@ export default async function AllClientsPage({
   });
 
   // For the bucket count pills — query once across the entire (unfiltered)
-  // set so the filter chips can show "Active · 9", "On-going · 3" etc.
+  // set so the filter chips can show "On-work · 9", "Participating · 3"
+  // etc. We also pull `tags` so we can derive the Akamai cohort count
+  // for the Akamai chip.
   const allForCounts = await prisma.client.findMany({
     where: baseWhere,
-    select: { status: true },
+    select: { status: true, tags: true },
   });
   const bucketCounts = Object.fromEntries(
     STATUS_BUCKETS.map((b) => [b, 0]),
   ) as Record<StatusBucket, number>;
-  for (const c of allForCounts) bucketCounts[toStatusBucket(c.status)] += 1;
+  let akamaiCount = 0;
+  for (const c of allForCounts) {
+    bucketCounts[toStatusBucket(c.status)] += 1;
+    if (c.tags?.toLowerCase().includes("akamai")) akamaiCount += 1;
+  }
   const totalCount = allForCounts.length;
 
   // Rank each client by the date of the *work it describes*, not by the
@@ -116,6 +164,9 @@ export default async function AllClientsPage({
     return c.updatedAt;
   }
   const rows = clients
+    // Hide rows whose only categorisation is the legacy `internal` /
+    // `client-engagement` tags. Direct slug pages still render.
+    .filter((c) => !isHiddenCategory(c))
     .map((c) => ({ c, last: lastSignal(c) }))
     .sort((a, b) => b.last.getTime() - a.last.getTime());
 
@@ -137,6 +188,17 @@ export default async function AllClientsPage({
                 />
               </span>
               {" · "}
+              <Link href="/clients?bucket=ALL" className="text-accent hover:underline">
+                <T id="clients.clear" fallback="clear" />
+              </Link>
+            </p>
+          ) : groupFilter === "akamai" ? (
+            <p className="mt-1.5 text-sm text-fg-muted font-description">
+              <T id="clients.showing" fallback="Showing" />{" "}
+              <span className="font-medium text-fg">
+                <T id="clients.group.akamai" fallback="Akamai migration" />
+              </span>
+              {" · "}
               <Link href="/clients" className="text-accent hover:underline">
                 <T id="clients.clear" fallback="clear" />
               </Link>
@@ -149,8 +211,10 @@ export default async function AllClientsPage({
       {/* ═══ Modern segmented filter bar w/ bucket counts ═══════════════ */}
       <ClientsFilterBar
         active={bucketFilter ?? null}
+        group={groupFilter}
         totalCount={totalCount}
         bucketCounts={bucketCounts}
+        akamaiCount={akamaiCount}
       />
 
       {/* ═══ List ═══════════════════════════════════════════════════════ */}
@@ -184,32 +248,31 @@ export default async function AllClientsPage({
           {rows.map(({ c, last }) => {
             const bucket = toStatusBucket(c.status);
             // Full-box tint per bucket — bold saturation (clearly visible).
+            // Per the May 2026 redesign: PARTICIPATING uses the emerald
+            // (green) accent (it's the "everything healthy" bucket),
+            // ON_WORK keeps the purple deep-engagement cue, IDLE stays
+            // amber.
             const bucketCard = {
-              ACTIVE:
-                "border-emerald-400 bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-500/40 dark:to-emerald-600/25 dark:border-emerald-400/50",
               ON_WORK:
                 "border-purple-400 bg-gradient-to-br from-purple-200 to-purple-300 dark:from-purple-500/40 dark:to-purple-600/25 dark:border-purple-400/50",
-              ON_GOING:
-                "border-sky-400 bg-gradient-to-br from-sky-200 to-sky-300 dark:from-sky-500/40 dark:to-sky-600/25 dark:border-sky-400/50",
+              PARTICIPATING:
+                "border-emerald-400 bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-500/40 dark:to-emerald-600/25 dark:border-emerald-400/50",
               IDLE:
                 "border-amber-400 bg-gradient-to-br from-amber-200 to-amber-300 dark:from-amber-500/40 dark:to-amber-600/25 dark:border-amber-400/50",
             }[bucket];
             const bucketName = {
-              ACTIVE: "text-emerald-950 dark:text-emerald-50",
               ON_WORK: "text-purple-950 dark:text-purple-50",
-              ON_GOING: "text-sky-950 dark:text-sky-50",
+              PARTICIPATING: "text-emerald-950 dark:text-emerald-50",
               IDLE: "text-amber-950 dark:text-amber-50",
             }[bucket];
             const bucketSummary = {
-              ACTIVE: "text-emerald-900/85 dark:text-emerald-100/85",
               ON_WORK: "text-purple-900/85 dark:text-purple-100/85",
-              ON_GOING: "text-sky-900/85 dark:text-sky-100/85",
+              PARTICIPATING: "text-emerald-900/85 dark:text-emerald-100/85",
               IDLE: "text-amber-900/85 dark:text-amber-100/85",
             }[bucket];
             const bucketDivider = {
-              ACTIVE: "border-emerald-400/70 dark:border-emerald-400/30",
               ON_WORK: "border-purple-400/70 dark:border-purple-400/30",
-              ON_GOING: "border-sky-400/70 dark:border-sky-400/30",
+              PARTICIPATING: "border-emerald-400/70 dark:border-emerald-400/30",
               IDLE: "border-amber-400/70 dark:border-amber-400/30",
             }[bucket];
             return (
@@ -230,6 +293,23 @@ export default async function AllClientsPage({
                     ) : null}
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <StatusBucketBadge bucket={bucket} />
+                      {/* Engagement-stage chip — communicates lifecycle
+                          maturity at a glance alongside the bucket. */}
+                      {(() => {
+                        const stageKey = (CLIENT_STAGES as readonly string[]).includes(
+                          c.stageKey,
+                        )
+                          ? (c.stageKey as ClientStage)
+                          : "ENGAGEMENT";
+                        return (
+                          <Badge tone={STAGE_TONE[stageKey]}>
+                            {STAGE_LABEL[stageKey]}
+                          </Badge>
+                        );
+                      })()}
+                      {c.tags?.toLowerCase().includes("akamai") ? (
+                        <Badge tone="info">Akamai</Badge>
+                      ) : null}
                     </div>
                   </div>
                 </div>

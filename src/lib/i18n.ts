@@ -89,17 +89,96 @@ export const DICT: Dict = {
   "clients.no_update": { en: "No weekly update yet", zh: "暂无周报" },
   "clients.open": { en: "Open →", zh: "查看 →" },
 
-  // ── Status bucket labels ──────────────────────────────────────────
-  "bucket.ACTIVE": { en: "Active", zh: "进行中" },
+  // ── Status bucket labels (3-bucket model, May 2026 redesign) ────────
+  // ON_WORK keeps the deep-engagement cue, PARTICIPATING is the new
+  // "everything healthy" bucket (renamed from Active + absorbed On-going),
+  // IDLE stays paused / on hold.
   "bucket.ON_WORK": { en: "On-work", zh: "深度跟进" },
-  "bucket.ON_GOING": { en: "On-going", zh: "长期跟进" },
+  "bucket.PARTICIPATING": { en: "Participating", zh: "参与中" },
   "bucket.IDLE": { en: "Idle", zh: "闲置" },
+  // Legacy aliases — retained so old pages that still reference
+  // `bucket.ACTIVE` / `bucket.ON_GOING` (e.g. via `t(`bucket.${b}`)`)
+  // resolve to the same Participating label rather than the raw key.
+  "bucket.ACTIVE": { en: "Participating", zh: "参与中" },
+  "bucket.ON_GOING": { en: "Participating", zh: "参与中" },
 
+  // ── Engagement stage labels (7-stage taxonomy) ──────────────────────
+  "stage.ENGAGEMENT": { en: "Engagement", zh: "初步接洽" },
+  "stage.PREPARE_POC": { en: "Prepare POC", zh: "POC 准备" },
+  "stage.POC": { en: "POC", zh: "POC 进行中" },
+  "stage.FINISH_POC": { en: "Finish POC", zh: "POC 完成" },
+  "stage.PRODUCTION": { en: "Production", zh: "生产运行" },
+  "stage.AFTERSALES_PROGRESS": { en: "Aftersales Progress", zh: "售后跟进" },
+  "stage.DISCONTINUED": { en: "Discontinued", zh: "已终止" },
+
+  // ── Topical group filter ─────────────────────────────────
+  "clients.group.akamai": { en: "Akamai", zh: "Akamai 迁移" },
+
+  // ── Client metadata labels ──────────────────────────────
+  "client.revenue_est": { en: "Revenue est.", zh: "预计收入" },
+  "client.first_engagement": { en: "First engagement", zh: "首次接洽" },
+  "client.signed_on": { en: "Signed on", zh: "签约日期" },
+  "client.open_in_crm": { en: "Open in CRM", zh: "在 CRM 中打开" },
+  "client.akamai_badge": { en: "Akamai migration", zh: "Akamai 迁移" },
+
+  // ── Stat-card sub-labels referenced from the home page ──────────────
+  "stat.onwork": { en: "On-work", zh: "深度跟进" },
+  "stat.onwork.sub": {
+    en: "Deep engagement · priority",
+    zh: "重点客户 · 全力推进",
+  },
+  "stat.participating": { en: "Participating", zh: "参与中" },
+  "stat.participating.sub": {
+    en: "Currently moving · in-flight",
+    zh: "有进展 · 进行中",
+  },
+
+  // ── First-visit identity gate ─────────────────────────────
+  "gate.eyebrow": { en: "Welcome", zh: "欢迎" },
+  "gate.title": {
+    en: "How would you like to use this tracker?",
+    zh: "请选择你的使用方式",
+  },
+  "gate.subtitle": {
+    en: "Pick once — the choice is remembered for a year, and you can switch back any time.",
+    zh: "仅需选择一次 — 偏好会保存一年，随时可以在顶部中重置。",
+  },
+  "gate.visitor_cta": { en: "I'm visiting", zh: "游客浏览" },
+  "gate.owner_cta": { en: "I own this tracker", zh: "我是所有者" },
+  "gate.helper": {
+    en: "Visitors can read everything; owners can edit and log updates.",
+    zh: "游客可查看全部内容；所有者可记录周报与编辑客户资料。",
+  },
+  "gate.reset": { en: "Reset identity", zh: "重置身份选择" },
   // ── Footer ────────────────────────────────────────────────────────
   "footer.role": {
     en: "EdgeOne Solutions Architect Intern",
     zh: "EdgeOne 解决方案架构师实习生",
   },
+
+  // ── Share link expired / revoked view ─────────────────────────────
+  "share.eyebrow": { en: "Shared report", zh: "共享报告" },
+  "share.expired.title": {
+    en: "This share link has expired",
+    zh: "该共享链接已过期",
+  },
+  "share.revoked.title": {
+    en: "This share link has been revoked",
+    zh: "该共享链接已被撤销",
+  },
+  "share.expired.desc": {
+    en: "The owner set an expiry on this read-only report and the date has passed.",
+    zh: "该只读报告设置了过期时间，链接已失效。",
+  },
+  "share.revoked.desc": {
+    en: "The owner has manually revoked access to this read-only report.",
+    zh: "该只读报告已被所有者手动撤销访问。",
+  },
+  "share.expired.cta": {
+    en: "If you still need a copy of the data, please ask the owner to regenerate the link.",
+    zh: "如果仍需查看数据，请联系所有者重新生成链接。",
+  },
+  "share.go_home": { en: "Go to homepage", zh: "返回首页" },
 };
 
 /**

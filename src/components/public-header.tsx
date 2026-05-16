@@ -8,6 +8,7 @@ import { useEffect, useState, Suspense } from "react";
 import { LogOut, Moon, Sun, Plus } from "lucide-react";
 import { SignInDialog } from "@/components/signin-dialog";
 import { LangToggle } from "@/components/lang-toggle";
+import { ResetIdentityButton } from "@/components/reset-identity-button";
 import { useLang } from "@/components/lang-provider";
 import { cn } from "@/lib/utils";
 
@@ -130,6 +131,7 @@ export function PublicHeader({
 
         <div className="ml-auto flex items-center gap-2">
           <LangToggle />
+          <ResetIdentityButton />
           <button
             type="button"
             onClick={toggleTheme}

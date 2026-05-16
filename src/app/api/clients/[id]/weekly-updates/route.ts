@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/roles";
 import { getOwnerIds } from "@/lib/public";
 import { parseWeekInput, formatWeekRange } from "@/lib/week";
-import { apiError } from "@/lib/api";
+import { apiError, notFound, badRequest } from "@/lib/api";
 
 const createSchema = z.object({
   weekStart: z.string().min(1), // YYYY-MM-DD or YYYY-Wxx
@@ -30,11 +30,11 @@ export async function POST(
         ownerId: ownerIds.length ? { in: ownerIds } : { in: ["__none__"] },
       },
     });
-    if (!client) throw new Error("Client not found");
+    if (!client) throw notFound("Client not found");
 
     const body = createSchema.parse(await req.json());
     const weekStart = parseWeekInput(body.weekStart);
-    if (!weekStart) throw new Error("Invalid weekStart");
+    if (!weekStart) throw badRequest("Invalid weekStart");
 
     const label = body.weekLabel?.trim() || formatWeekRange(weekStart);
 

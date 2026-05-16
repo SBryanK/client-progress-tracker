@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Plus, ArrowRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getOwnerIds } from "@/lib/public";
+import { getOwnerIds, isHiddenCategory } from "@/lib/public";
 import { Card } from "@/components/ui/card";
 import { StatusBucketBadge } from "@/components/status-badge";
 import { T } from "@/components/t";
@@ -23,10 +23,10 @@ export default async function LandingPage() {
   const ownerIds = await getOwnerIds();
   const ownerFilter = ownerIds.length ? { in: ownerIds } : { in: ["__none__"] };
 
-  const [clients, latestUpdates] = await Promise.all([
+  const [clientsRaw, latestUpdates] = await Promise.all([
     prisma.client.findMany({
       where: { ownerId: ownerFilter, archived: false },
-      select: { id: true, status: true },
+      select: { id: true, status: true, tags: true },
     }),
     prisma.weeklyUpdate.findMany({
       where: { client: { ownerId: ownerFilter, archived: false } },
@@ -35,6 +35,9 @@ export default async function LandingPage() {
       take: 6,
     }),
   ]);
+  // Hide legacy `internal` / `client-engagement` rows from the public
+  // landing page — they're still reachable via direct slug.
+  const clients = clientsRaw.filter((c) => !isHiddenCategory(c));
 
   const bucketCounts = Object.fromEntries(
     STATUS_BUCKETS.map((b) => [b, 0]),
@@ -75,7 +78,7 @@ export default async function LandingPage() {
               </Link>
             ) : null}
             <Link
-              href="/clients"
+              href="/clients?bucket=ON_WORK"
               className={`press inline-flex h-12 items-center gap-2 rounded-xl px-6 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${
                 isOwner
                   ? "bg-bg border border-border hover:bg-bg-muted hover:border-border-strong"
@@ -104,7 +107,7 @@ export default async function LandingPage() {
       {/* ═══ Stats row ═══════════════════════════════════════════════════════ */}
       <section
         aria-label="Pipeline snapshot"
-        className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 stagger animate-fade-up"
+        className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 stagger animate-fade-up"
       >
         <StatCard
           labelKey="stat.total"
@@ -112,14 +115,6 @@ export default async function LandingPage() {
           value={clients.length}
           sublabelKey="stat.total.sub"
           sublabel="Tracked across all statuses"
-        />
-        <StatCard
-          labelKey="stat.active"
-          label="Active"
-          value={bucketCounts.ACTIVE}
-          tone="success"
-          sublabelKey="stat.active.sub"
-          sublabel="Currently moving"
         />
         <StatCard
           labelKey="stat.onwork"
@@ -130,19 +125,12 @@ export default async function LandingPage() {
           sublabel="Deep engagement · priority"
         />
         <StatCard
-          labelKey="stat.ongoing"          label="On-work"
-          value={bucketCounts.ON_WORK}
-          tone="purple"
-          sublabelKey="stat.onwork.sub"
-          sublabel="Deep engagement · priority"
-        />
-        <StatCard
-          labelKey="stat.ongoing"
-          label="On-going"
-          value={bucketCounts.ON_GOING}
-          tone="info"
-          sublabelKey="stat.ongoing.sub"
-          sublabel="Long-running / in-flight"
+          labelKey="stat.participating"
+          label="Participating"
+          value={bucketCounts.PARTICIPATING}
+          tone="success"
+          sublabelKey="stat.participating.sub"
+          sublabel="Currently moving · in-flight"
         />
         <StatCard
           labelKey="stat.idle"
