@@ -1,11 +1,12 @@
 // Single-tenant data access helper.
 //
-// Although we allow multiple OWNER email addresses to sign in (e.g. personal
+// Although we allow multiple OWNER identities to sign in (e.g. personal
 // account + work account for the same human), all client data belongs to
-// "the primary owner" — the first email listed in OWNER_EMAILS.  This keeps
-// the tracker single-tenant: every reader and every editor sees the same
-// dataset.  When a second owner email signs in and adds a client, it is
-// written against the primary owner's id, not their own.
+// "the primary owner" — the first identity listed in OWNER_USERNAMES (or,
+// for legacy installs, OWNER_EMAILS). This keeps the tracker single-tenant:
+// every reader and every editor sees the same dataset. When a second owner
+// signs in and adds a client, it is written against the primary owner's id,
+// not their own.
 //
 // Anonymous public visitors also read the primary owner's data.
 //
@@ -14,13 +15,21 @@
 
 import { prisma } from "@/lib/prisma";
 
-function primaryOwnerEmail(): string {
+function configuredOwnerUsernames(): string[] {
   const raw =
-    process.env.OWNER_EMAILS ??
-    process.env.OWNER_EMAIL ??
-    "bryan@local.test";
-  const first = raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)[0];
-  return first ?? "bryan@local.test";
+    process.env.OWNER_USERNAMES ?? process.env.OWNER_USERNAME ?? "";
+  return raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function configuredOwnerEmails(): string[] {
+  const raw = process.env.OWNER_EMAILS ?? process.env.OWNER_EMAIL ?? "";
+  return raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 let cachedId: string | null = null;
@@ -28,22 +37,38 @@ let cachedAt = 0;
 const TTL_MS = 30_000;
 
 /**
- * Returns the user id of the primary owner (first OWNER_EMAILS entry), or
- * null if the DB has not been seeded yet.  Cached for 30 s to avoid a DB
- * hit on every page render.
+ * Returns the user id of the primary owner, or null if the DB has not been
+ * seeded yet. Lookup order: first matching OWNER_USERNAMES entry, then first
+ * matching OWNER_EMAILS entry. Cached for 30 s to avoid a DB hit on every
+ * page render.
  */
 export async function getPrimaryOwnerId(): Promise<string | null> {
   const now = Date.now();
   if (cachedId && now - cachedAt < TTL_MS) return cachedId;
-  const email = primaryOwnerEmail();
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-  if (!user) return null;
-  cachedId = user.id;
-  cachedAt = now;
-  return cachedId;
+
+  for (const username of configuredOwnerUsernames()) {
+    const u = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+    if (u) {
+      cachedId = u.id;
+      cachedAt = now;
+      return cachedId;
+    }
+  }
+  for (const email of configuredOwnerEmails()) {
+    const u = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (u) {
+      cachedId = u.id;
+      cachedAt = now;
+      return cachedId;
+    }
+  }
+  return null;
 }
 
 /**

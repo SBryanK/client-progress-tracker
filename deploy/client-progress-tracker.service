@@ -1,0 +1,44 @@
+[Unit]
+Description=Client Progress Tracker (Next.js production server)
+Documentation=file:///data/workspace/client-progress-tracker/DEPLOY.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/data/workspace/client-progress-tracker
+EnvironmentFile=/data/workspace/client-progress-tracker/.env
+Environment=NODE_ENV=production
+Environment=PORT=80
+Environment=HOSTNAME=0.0.0.0
+Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+# Pre-start: idempotent bootstrap (schema sync + OWNER seed + roster reconcile)
+ExecStartPre=/usr/bin/npx --no-install prisma db push --skip-generate --accept-data-loss
+ExecStartPre=/usr/bin/npx --no-install tsx prisma/seed.ts
+ExecStartPre=-/usr/bin/npx --no-install tsx scripts/migrate-buckets-to-roster.ts
+
+# Production server (binds 0.0.0.0:80)
+ExecStart=/usr/bin/npx --no-install next start -H 0.0.0.0 -p 80
+
+Restart=always
+RestartSec=5s
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cpt
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/data/workspace/client-progress-tracker
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,100 +1,143 @@
 # Deployment Runbook
 
 This document is the **single source of truth** for keeping the Client Progress
-Tracker running smoothly on the AnyDev preview at
-`https://sbryankusno-any6.devcloud.woa.com/`. It covers the standard
-"redeploy after a code change" flow and the recovery procedure for the
-"JS / CSS not loading" symptom we hit on 2026-05-17.
+Tracker running on the AnyDev preview at
+`http://sbryankusno-any6.devcloud.woa.com/`.
+
+The app is supervised by **systemd** as the unit
+`client-progress-tracker.service`, listening directly on port 80 of the CVM.
+The AnyDev smart gateway routes the bare hostname to that port, so no
+`PORT-` prefix is needed.
+
+The VM does not have `docker compose` installed; the `Dockerfile` and
+`docker-compose.yml` in the repo remain valid for any host that does (e.g.
+Vercel CI, a future container migration, or local dev), but they are NOT
+the production deployment path on this VM.
 
 ---
 
-## TL;DR — How to redeploy after pushing to `main`
+## TL;DR — Redeploy after pushing to `main`
 
 ```bash
-# From inside the dev container shell (not local machine):
 cd /data/workspace/client-progress-tracker
 git pull origin main
-
-docker compose down            # stop the running container
-docker compose up --build -d   # rebuild image + start fresh container
-
-docker compose logs -f web     # watch the entrypoint bootstrap logs
+npm ci --no-audit --no-fund      # only when package-lock.json changed
+npm run build                    # safe; never touches the DB
+sudo systemctl restart client-progress-tracker
+sudo journalctl -u client-progress-tracker -n 30 --no-pager
 ```
 
-The entrypoint will:
+The systemd `ExecStartPre` chain runs three idempotent steps before the
+server starts:
 
-1. Apply the Prisma schema (`prisma db push`)
-2. Idempotently seed the OWNER user (`sbryank`)
-3. Idempotently reconcile the 33-client roster across the four buckets
-4. Start the Next.js production server
+1. `prisma db push --skip-generate --accept-data-loss` — sync schema
+2. `tsx prisma/seed.ts` — upsert the OWNER user (`sbryank`)
+3. `tsx scripts/migrate-buckets-to-roster.ts` — reconcile the 33-client roster
 
-The DB lives on the named docker volume `app-data` and **survives** rebuilds.
-Steps 2 and 3 are upserts — they never delete data.
+After that, `next start -H 0.0.0.0 -p 80` takes over. The service is
+`Restart=always` with rate-limited backoff, so a crash auto-recovers within
+~5 s.
 
 ---
 
 ## Architecture (one paragraph)
 
-The container listens on port 3000. `docker-compose.yml` maps host port 80 →
-container port 3000 so AnyDev's smart gateway routes the bare hostname
-(`sbryankusno-any6.devcloud.woa.com`) directly to it without needing a `PORT-`
-prefix. SQLite lives at `/app/data/app.db` inside the container, which is
-backed by the named docker volume `app-data` so the data survives image
-rebuilds. NextAuth secrets and the Anthropic API key come from `.env` via
-`env_file` (never baked into the image). `NEXT_PUBLIC_*` variables are
-inlined at build time, so changing the public hostname requires a rebuild.
+`/etc/systemd/system/client-progress-tracker.service` (a copy of
+`deploy/client-progress-tracker.service` in the repo) defines the unit. It
+runs as `root` (required to bind port 80) with `NoNewPrivileges`,
+`ProtectSystem=full`, `ProtectHome=read-only`, and
+`ReadWritePaths=/data/workspace/client-progress-tracker`. The SQLite DB
+lives at the **absolute** path
+`/data/workspace/client-progress-tracker/data/app.db` so Prisma's CLI and
+runtime client always agree on which file to open. The unit reads
+`.env` via `EnvironmentFile` for `AUTH_SECRET`, `OWNER_USERNAMES`,
+`OWNER_PASSWORD`, `ANTHROPIC_API_KEY`, etc. `NEXT_PUBLIC_*` values are
+inlined into the client bundle by `next build`, so changing the public URL
+requires a rebuild.
+
+---
+
+## First-time install (or rebuilding from scratch on a new VM)
+
+```bash
+cd /data/workspace/client-progress-tracker
+
+# 1. Install deps and build
+npm ci --no-audit --no-fund
+npm run build
+
+# 2. Bootstrap the DB (idempotent — safe to re-run)
+npm run db:bootstrap
+
+# 3. Install the systemd unit
+sudo cp deploy/client-progress-tracker.service \
+        /etc/systemd/system/client-progress-tracker.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now client-progress-tracker
+sudo systemctl status client-progress-tracker --no-pager
+```
+
+`enable --now` does both `enable` (boot persistence) and `start` (run now)
+in one command.
 
 ---
 
 ## Recovery: "I pushed code but the site shows broken JS / CSS"
 
-This happens when a stale `next-server` is still running with in-memory
-references to chunk hashes that the latest build has overwritten. Browser
-fetches `/_next/static/chunks/main-app-OLD_HASH.js` → server returns
-`HTTP 400`. The fix is to restart the container so Next.js rehydrates from
-the fresh `.next/` build.
+This is the classic stale-server symptom. A `next-server` is running with
+in-memory references to chunk hashes that a newer `npm run build` has
+overwritten. Browser fetches `/_next/static/chunks/main-app-OLD_HASH.js`
+→ server returns `HTTP 400`.
 
 ```bash
 cd /data/workspace/client-progress-tracker
-docker compose restart web                # quick: same image, fresh process
-# or, if the image itself is stale:
-docker compose down && docker compose up --build -d
+git pull origin main
+npm run build                            # rebuild .next/
+sudo systemctl restart client-progress-tracker
 ```
 
-Verify the fix:
+Verify: every chunk in the served HTML should resolve `200 OK`:
 
 ```bash
-# Should return HTTP 200 and HTML referencing _next chunks that all 200.
-curl -sSI http://localhost/ | head -3
-curl -s   http://localhost/ | grep -oE '/_next/static/chunks/[^"]+\.js' | head -3 | \
-  while read p; do printf "%s -> " "$p"; curl -sI "http://localhost$p" | head -1; done
+curl -s http://localhost/ -o /tmp/p.html -w "HTTP=%{http_code}\n"
+for p in $(grep -oE '/_next/static/(css|chunks)/[^"]+\.(css|js)' /tmp/p.html | sort -u); do
+  printf "%-70s %s\n" "$p" "$(curl -sI "http://localhost$p" | head -1)"
+done
 ```
 
-Every chunk should return `HTTP/1.1 200 OK`. If any return `400` or `404`,
-the container is still running an old build — `docker compose down` and
-`up --build` again.
+If any path 4xx's, the running server is still on the old build — restart
+the service again. If `restart` doesn't help, run `sudo systemctl status
+client-progress-tracker` to check whether `ExecStartPre` failed (e.g. a
+Prisma migration error) and read `journalctl -u client-progress-tracker
+-n 100` for the cause.
 
 ---
 
 ## Recovery: "I see the app but there are zero clients"
 
-The DB volume was reset (e.g. `docker volume rm client-progress-tracker_app-data`).
-The entrypoint reseeds the OWNER user automatically, but to repopulate the
-33-client roster manually:
+Almost always one of:
+
+1. `OWNER_USERNAMES` in `.env` doesn't match the seeded user (compare
+   `sqlite3 data/app.db "select username from User"` with the env value).
+2. The SQLite file at `data/app.db` is empty (0 bytes) or missing.
+
+Fix:
 
 ```bash
-docker compose exec web npm run db:bootstrap
+cd /data/workspace/client-progress-tracker
+npm run db:bootstrap            # idempotent: upsert OWNER + 33 clients
+sudo systemctl restart client-progress-tracker
+curl -s http://localhost/api/clients | head -c 200    # should NOT be {"clients":[]}
 ```
 
 `db:bootstrap` runs `prisma/seed.ts` (OWNER upsert) and
 `scripts/migrate-buckets-to-roster.ts` (33-client upsert) in sequence. Both
-are idempotent.
+are idempotent — running them on a healthy DB is a no-op.
 
-If you're running natively (no docker) and need to recover dev data:
-
-```bash
-npm run db:bootstrap
-```
+`getOwnerIds()` in `src/lib/public.ts` accepts BOTH `OWNER_USERNAMES`
+(preferred, matches the username login model) and `OWNER_EMAILS` (legacy).
+If you accidentally remove both from `.env`, every public read returns
+empty.
 
 ---
 
@@ -104,8 +147,8 @@ npm run db:bootstrap
 - **Password**: `#1203Sadhu` (configurable via `OWNER_PASSWORD` in `.env`)
 
 Sign-in uses **username**, not email. The "Sign in" button is in the
-top-right of every page; or use the "I'm Bryan" card on the first-visit
-identity gate.
+top-right of every page, or use the "I'm Bryan" card on the first-visit
+identity gate at `/welcome`.
 
 ---
 
@@ -114,29 +157,51 @@ identity gate.
 | Script | What it does | Safe for local? |
 | --- | --- | --- |
 | `npm run dev` | Hot-reload dev server on `:3000` | ✅ |
-| `npm run build` | `prisma generate` + `next build` (no DB push) | ✅ |
-| `npm run build:image` | Same plus `prisma db push` against a throwaway DB | ⚠️ Docker-only |
+| `npm run build` | `prisma generate` + `next build` (NO DB push) | ✅ |
+| `npm run build:image` | Same, plus `prisma db push` against a throwaway DB | ⚠️ Docker-only |
 | `npm run start` | Serve the built `.next/` on `:3000` | ✅ |
-| `npm run db:bootstrap` | Seed OWNER + reconcile 33-client roster (idempotent) | ✅ |
-| `npm run db:seed` | Seed OWNER only | ✅ |
+| `npm run db:bootstrap` | Upsert OWNER + reconcile 33-client roster | ✅ |
+| `npm run db:seed` | Upsert OWNER only | ✅ |
 | `npm run db:migrate-buckets` | Reconcile client roster only | ✅ |
 
 `npm run build` is intentionally **non-destructive** — it never touches the
-DB. The `build:image` variant is the one the Dockerfile invokes against the
-throwaway `/tmp/build.db`, so the production volume is never affected by
-image builds.
+DB. You can run it on the host while the systemd service is up; the
+service won't notice until you `systemctl restart` it.
 
 ---
 
-## Why we don't run `npm run build` on the host while the container is up
+## Why `npm run build` is now safe
 
-Old behaviour (pre 2026-05-17): `package.json`'s `build` ran
-`prisma db push --accept-data-loss` against `prisma/dev.db`, **and** rewrote
-`.next/`. If a `next-server` was still running, its chunk hashes would
-diverge from disk → broken JS/CSS until the server restarted. That's the
-exact bug from the May 17 incident.
+Pre-2026-05-17 the `build` script ran `prisma db push --accept-data-loss`
+against the dev DB AND rewrote `.next/`. If a server was still running it
+would lose track of its chunk hashes → broken JS/CSS until restart. That
+was the original "JS/CSS gak ke-load" bug.
 
-New behaviour: `build` no longer touches the DB, and the Dockerfile uses
-`build:image` which operates on a throwaway DB inside the build context.
-You can run `npm run build` on the host any time — it won't break the
-running container, and it won't wipe data.
+Now: `build` is non-destructive, and `build:image` (Docker-only) is the
+sole script that mutates a DB during build, and it operates on
+`/tmp/build.db` (throwaway). So neither development DB nor production DB
+can be touched by a build.
+
+---
+
+## File layout reference
+
+```
+/data/workspace/client-progress-tracker/
+├── data/app.db                  # SQLite — the production DB (absolute path)
+├── .env                         # secrets + OWNER_USERNAMES + DATABASE_URL
+├── deploy/
+│   └── client-progress-tracker.service   # systemd unit (source of truth)
+├── docker/
+│   └── entrypoint.sh            # only used when running via docker compose
+├── prisma/
+│   ├── schema.prisma            # SQLite schema
+│   ├── schema.postgres.prisma   # Vercel/Postgres variant
+│   └── seed.ts                  # OWNER upsert
+└── scripts/
+    └── migrate-buckets-to-roster.ts   # 33-client upsert (idempotent)
+```
+
+`/etc/systemd/system/client-progress-tracker.service` is a copy of the
+file in `deploy/`; `daemon-reload` after editing the file in the repo,
+or `cp` the new version over and `daemon-reload` again.

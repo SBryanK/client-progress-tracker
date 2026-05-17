@@ -1,22 +1,43 @@
 // Public-read helpers.
 //
-// The site is single-tenant in intent — only the OWNER_EMAILS addresses can
-// sign in and edit. However, we want read queries to return data written by
-// ANY of those owner accounts, so that switching between your personal and
-// work email does not split the dataset.
+// The site is single-tenant in intent — only the OWNER_USERNAMES (or, for
+// legacy installs, OWNER_EMAILS) accounts can sign in and edit. However we
+// want read queries to return data written by ANY of those owner accounts,
+// so a second sign-in identity does not split the dataset.
 //
-// `getOwnerIds()` returns the DB user ids of every email in OWNER_EMAILS,
-// deduped and cached briefly. Anonymous public visitors use this too; the
-// landing page, client list, client detail, and weekly timeline all filter
-// on `ownerId IN getOwnerIds()`.
+// `getOwnerIds()` returns the DB user ids of every configured owner that
+// actually exists, deduped and cached briefly. Anonymous public visitors
+// use this too; the landing page, client list, client detail, and weekly
+// timeline all filter on `ownerId IN getOwnerIds()`.
 
 import { prisma } from "@/lib/prisma";
 
-function configuredOwnerEmails(): string[] {
+/**
+ * Returns the configured owner usernames (lower-cased, deduped).
+ * Empty array = no usernames configured (the admin is using the legacy
+ * OWNER_EMAILS path instead).
+ */
+function configuredOwnerUsernames(): string[] {
   const raw =
-    process.env.OWNER_EMAILS ??
-    process.env.OWNER_EMAIL ??
-    "bryan@local.test";
+    process.env.OWNER_USERNAMES ?? process.env.OWNER_USERNAME ?? "";
+  return Array.from(
+    new Set(
+      raw
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+}
+
+/**
+ * Returns the configured owner emails (lower-cased, deduped).
+ * Empty array = no emails configured.  We DO NOT fall back to a hard-coded
+ * "bryan@local.test" here any more — that fallback silently masked broken
+ * configuration and caused the empty-list rendering bug fixed in May 2026.
+ */
+function configuredOwnerEmails(): string[] {
+  const raw = process.env.OWNER_EMAILS ?? process.env.OWNER_EMAIL ?? "";
   return Array.from(
     new Set(
       raw
@@ -31,31 +52,54 @@ let cached: { ids: string[]; at: number } | null = null;
 const TTL_MS = 30_000;
 
 /**
- * Returns the Prisma user ids for every configured OWNER email that actually
- * exists in the DB. Empty array = DB not seeded yet.
+ * Returns the Prisma user ids for every configured owner that actually
+ * exists in the DB. Empty array = DB not seeded yet OR owner config does
+ * not match any row.
+ *
+ * Lookup order (each is a UNION, not a fallback — both shapes can coexist):
+ *   1. usernames listed in OWNER_USERNAMES
+ *   2. emails    listed in OWNER_EMAILS  (legacy)
  */
 export async function getOwnerIds(): Promise<string[]> {
   const now = Date.now();
   if (cached && now - cached.at < TTL_MS) return cached.ids;
+
+  const usernames = configuredOwnerUsernames();
   const emails = configuredOwnerEmails();
-  if (emails.length === 0) return [];
+  if (usernames.length === 0 && emails.length === 0) {
+    cached = { ids: [], at: now };
+    return [];
+  }
+
   const users = await prisma.user.findMany({
-    where: { email: { in: emails } },
+    where: {
+      OR: [
+        ...(usernames.length ? [{ username: { in: usernames } }] : []),
+        ...(emails.length ? [{ email: { in: emails } }] : []),
+      ],
+    },
     select: { id: true },
   });
-  const ids = users.map((u) => u.id);
+  const ids = Array.from(new Set(users.map((u) => u.id)));
   cached = { ids, at: now };
   return ids;
 }
 
 /**
- * Returns the "primary" owner id (first OWNER_EMAILS entry that exists in
- * the DB). Used when we need to WRITE — we pick a single tenant to anchor
- * the record against.
+ * Returns the "primary" owner id — the first entry in OWNER_USERNAMES that
+ * exists in the DB; if no usernames are configured, the first OWNER_EMAILS
+ * entry that exists. Used when we need to WRITE — we pick a single tenant
+ * to anchor the record against.
  */
 export async function getPrimaryOwnerId(): Promise<string | null> {
-  const emails = configuredOwnerEmails();
-  for (const email of emails) {
+  for (const username of configuredOwnerUsernames()) {
+    const u = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+    if (u) return u.id;
+  }
+  for (const email of configuredOwnerEmails()) {
     const u = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
